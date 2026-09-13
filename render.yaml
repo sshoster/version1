@@ -1,7 +1,7 @@
 # Render blueprint (https://render.com/docs/blueprint-spec).
-# Deploy: Render dashboard → New → Blueprint → pick this repo.
+# Deploy: Render dashboard ??? New ??? Blueprint ??? pick this repo.
 #
-# SECRETS ARE NEVER COMMITTED: every "sync: false" entry is a placeholder — Render prompts for
+# SECRETS ARE NEVER COMMITTED: every "sync: false" entry is a placeholder ??? Render prompts for
 # the value in the dashboard on first deploy (tip: the Environment tab has "Add from .env" for
 # bulk paste from your local .env). Everything else is a safe, non-credential value.
 services:
@@ -19,13 +19,13 @@ services:
       - key: JWT_SECRET
         generateValue: true # Render generates a strong random value
       - key: APP_ENCRYPTION_KEY
-        sync: false # PLACEHOLDER — base64 of 32 random bytes: openssl rand -base64 32
+        sync: false # PLACEHOLDER ??? base64 of 32 random bytes: openssl rand -base64 32
       - key: MONGODB_URI
-        sync: false # PLACEHOLDER — mongodb+srv://sshoster_db_user:<PASSWORD>@cluster0.gl1a4bh.mongodb.net/debate?retryWrites=true&w=majority
+        sync: false # PLACEHOLDER ??? mongodb+srv://sshoster_db_user:<PASSWORD>@cluster0.gl1a4bh.mongodb.net/debate?retryWrites=true&w=majority
       - key: APP_BASE_URL
-        value: https://bridge-ai.onrender.com # update if the service gets a different URL/domain
+        value: https://bridge-ai-scfa.onrender.com # update if the service gets a different URL/domain
       - key: CORS_ALLOWED_ORIGINS
-        value: https://bridge-ai.onrender.com # keep in sync with APP_BASE_URL
+        value: https://bridge-ai-scfa.onrender.com # keep in sync with APP_BASE_URL
 
       # --- Files: Cloudflare R2 (S3-compatible) ---
       - key: STORAGE_PROVIDER
@@ -39,15 +39,15 @@ services:
       - key: S3_PATH_STYLE
         value: "true"
       - key: S3_ACCESS_KEY
-        sync: false # PLACEHOLDER — R2 API token Access Key ID
+        sync: false # PLACEHOLDER ??? R2 API token Access Key ID
       - key: S3_SECRET_KEY
-        sync: false # PLACEHOLDER — R2 API token Secret Access Key
+        sync: false # PLACEHOLDER ??? R2 API token Secret Access Key
 
       # --- AI ---
       - key: LLM_PROVIDER
         value: openai # set to "fake" to run without an API key / AI costs
       - key: OPENAI_API_KEY
-        sync: false # PLACEHOLDER — sk-...
+        sync: false # PLACEHOLDER ??? sk-...
       - key: OPENAI_MODEL
         value: gpt-5.6-luna
 
@@ -61,7 +61,7 @@ services:
       - key: SMTP_USERNAME
         value: sshoster@gmail.com
       - key: SMTP_PASSWORD
-        sync: false # PLACEHOLDER — 16-character Google app password
+        sync: false # PLACEHOLDER ??? 16-character Google app password
       - key: MAIL_FROM
         value: sshoster@gmail.com
 
