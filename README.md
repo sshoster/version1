@@ -11,6 +11,39 @@ and no agreement is approved without explicit human confirmation.
 - Phased backlog: [docs/backlog.md](docs/backlog.md)
 - Public deployment guide (Render + Atlas + R2): [docs/deployment.md](docs/deployment.md)
 
+Live deployment: https://bridge-ai-fuev.onrender.com
+
+## Features
+
+- **Discussions** with an explicit 11-state lifecycle (pause/close/reopen), roles
+  (owner, party, advisor, observer), and plain-language Hebrew-first UI (English toggle, full RTL).
+- **Invitations**: single-use hashed links with expiry and revocation; inviter provides the
+  invitee's name (becomes their room display name); optional bilingual invitation email.
+- **Private AI assistant** per party: encrypted private notes, automatic calm rewording
+  suggestions, private guidance (goals/boundaries/flexibility) feeding the negotiation.
+- **Controlled sharing**: choose exactly who sees each message (parties / everyone / my advisors /
+  selected people), exact-preview confirmation bound by content hash, immutable versions with
+  frozen audience snapshots, provenance labels ("AI-assisted wording, approved by …"),
+  withdraw-not-delete.
+- **AI-to-AI negotiation**: the two assistants confer under one neutral protocol using only
+  shared content, with schema-validated turns, stopping rules (missing info, sensitive
+  disclosure, deadlock, possible agreement), turn/token/time budgets, private questions to their
+  own user, and live progress over WebSocket.
+- **Proposals & approvals**: versioned proposals; approval requests pinned to an exact version +
+  hash; independent, idempotent, human-only decisions with equal-weight Approve/Reject/Request
+  changes; any revision voids pending approvals; agreement only when every party approves the
+  same version.
+- **Outcome documents**: AI discussion summary, deterministic approved understandings (with
+  per-party approval records), and an AI agreement draft ("not legal advice") — versioned,
+  labeled, printable/exportable from the Result page.
+- **Files**: images/documents up to 50MB following the same trust model, S3-compatible storage
+  (local disk / AWS S3 / Cloudflare R2 / MinIO by env var), avatars with generated-initial fallback.
+- **Transparency**: hash-chained append-only audit, authorization-filtered plain-language
+  timeline, participants panel with live presence.
+- **Platform**: JWT auth with rotating refresh tokens, AES-256-GCM field encryption for private
+  content, rate limiting, transactional outbox, in-app notifications, i18n, OpenAPI docs at
+  `/swagger-ui.html`.
+
 ## Repository layout
 
 ```
@@ -109,15 +142,16 @@ cd frontend && npx playwright install chromium && npm run e2e
 cd frontend && npm test        # Angular unit tests (vitest)
 ```
 
-## Email invitations (optional, Gmail SMTP)
+## Email invitations (optional)
 
-By default invitations are shared as links and no email is sent. To also deliver invitations by
-email through Gmail:
+By default invitations are shared as links and no email is sent. Two transports exist behind the
+same `EmailSender` port, selected with `MAIL_PROVIDER`:
 
-1. On the Google account that should send the emails, enable **2-Step Verification**.
-2. Create an **App Password** (Google Account → Security → 2-Step Verification → App passwords).
-3. In `.env`, set `MAIL_ENABLED=true`, `SMTP_USERNAME`, `SMTP_PASSWORD` (the app password), and
-   `MAIL_FROM`; restart the backend with those variables in its environment.
+- **`smtp` (default, local development)** — Gmail: enable 2-Step Verification, create an App
+  Password, set `MAIL_ENABLED=true`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM` in `.env`.
+- **`brevo` (production)** — hosts like Render block outbound SMTP, so production sends over
+  HTTPS via Brevo: set `MAIL_PROVIDER=brevo`, `BREVO_API_KEY`, `MAIL_FROM` (the sender address
+  must be verified in Brevo). See [docs/deployment.md](docs/deployment.md).
 
 Delivery is best-effort: a mail failure never blocks invitation creation — the shareable link
 always remains available in the app, and the UI shows whether the email went out.

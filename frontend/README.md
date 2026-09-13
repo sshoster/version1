@@ -1,59 +1,23 @@
-# Frontend
+# Bridge AI — frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.24.
+Angular 21 app (standalone components, signals, Hebrew-first RTL with an English toggle).
+All project documentation lives at the repository root — see [../README.md](../README.md).
 
-## Development server
-
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Commands
 
 ```bash
-ng generate component component-name
+npm start        # dev server on :4200, proxies /api and /ws to the backend on :8080
+npm test         # unit tests (vitest)
+npm run build    # production build to dist/frontend
+npm run e2e      # Playwright E2E (see the root README: requires backend with the fake LLM provider)
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Structure
 
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- `src/app/core/` — API services, auth (JWT + refresh interceptor), i18n dictionary, WebSocket
+  (STOMP) room events, models.
+- `src/app/features/` — pages: welcome/auth, home, creation wizard, the discussion room
+  (shared/assistant tabs, negotiation, proposals, files, participants+presence, timeline),
+  result documents, invite acceptance, info pages.
+- `src/app/shared/` — reusable UI (avatar with generated-initial fallback).
+- `e2e/` — the §17 end-to-end flow on two browser contexts.

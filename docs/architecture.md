@@ -1,7 +1,9 @@
-# Architecture — Trusted AI Negotiation Platform
+# Architecture — Bridge AI (Trusted AI Negotiation Platform)
 
-Status: Phase 0 (design). This document records the architectural decisions for the MVP defined in
-[`docs/design-prompt.md`](design-prompt.md).
+Status: **implemented** — all six phases of the MVP defined in [`docs/design-prompt.md`](design-prompt.md)
+are built and tested (see [`backlog.md`](backlog.md)); the app is deployed publicly (see
+[`deployment.md`](deployment.md)). This document records the architectural decisions and reflects
+the delivered state.
 
 ---
 
@@ -49,7 +51,7 @@ created. The Gradle 9.3 wrapper is kept.
 
 1. The backend toolchain pins Java 17 (installed JDK, owner-approved); JDK 21 + virtual threads is a documented later upgrade.
 2. OpenAI is the first real LLM provider (owner decision; model name configurable via env); an Anthropic adapter is a later addition behind the same interface.
-3. Email delivery is out of scope for the MVP — invitations produce a link (surfaced in-app / in logs / seed data); the notification abstraction has an email port for later.
+3. Invitations produce a single-use link surfaced in-app, and (when enabled) also send a bilingual email through an `EmailSender` port with two implementations: Gmail SMTP (local development) and Brevo HTTPS API (production — hosts like Render block outbound SMTP). Selected via `MAIL_PROVIDER`.
 4. Hebrew is the default UI locale; English resources are structured from day one but may lag in copy quality.
 5. Single deployment unit (modular monolith), horizontal scale-out is out of scope for the MVP; the outbox worker uses atomic claims so a second instance would not break correctness.
 
@@ -73,16 +75,18 @@ flowchart LR
         messaging
         negotiation
         agreements
+        files
         audit
         notifications
         llm
         shared
     end
-    REST --> identity & discussion & messaging & negotiation & agreements
+    REST --> identity & discussion & messaging & negotiation & agreements & files
     WS --> notifications
     messaging --> permissions & audit
     negotiation --> llm & permissions & audit & messaging
-    agreements --> permissions & audit
+    agreements --> permissions & audit & llm & messaging
+    files --> permissions & audit & messaging
     discussion --> participants & permissions & audit
     notifications --> permissions
 ```
@@ -99,10 +103,11 @@ Module responsibilities:
 - **permissions** — the single authorization service: role × scope × resource checks used by every other module; audience-snapshot resolution.
 - **messaging** — private conversations/messages, AI drafts, share previews, shared items + versions, withdrawal/supersession.
 - **negotiation** — negotiation runs, per-party agent contexts, round orchestration, stopping rules, questions/answers.
-- **agreements** — proposals, proposal versions/diffs, approval requests, approvals, the three outcome artifacts.
-- **audit** — append-only hash-chained `AuditEvent` writer + authorized timeline/audit read models.
-- **notifications** — in-app notifications, outbox worker, WebSocket event fan-out.
-- **llm** — `LlmProvider` SPI, Anthropic + Fake adapters, prompt templates (versioned), budgets, resilience.
+- **agreements** — proposals, proposal versions, approval requests, approvals, and the three outcome artifacts (AI summary, deterministic approved understandings, AI agreement draft).
+- **files** — attachments (≤50MB, allowlisted types) following the message trust model (private → explicit audience share → withdraw-not-delete), behind a `FileStorage` port with local-disk and S3-compatible (AWS S3 / Cloudflare R2 / MinIO) implementations; also backs profile avatars.
+- **audit** — append-only hash-chained `AuditEvent` writer + the authorized plain-language timeline and technical audit read models.
+- **notifications** — in-app notifications, WebSocket event fan-out (room topics + audience-scoped user queues), per-room presence tracking (online/recently-active, in-memory), and the `EmailSender` port (SMTP / Brevo HTTPS).
+- **llm** — `LlmProvider` SPI with the OpenAI adapter (retries, circuit breaker, JSON mode for structured calls) and the deterministic `FakeLlmProvider`; versioned prompt templates (`prompts/{draft,negotiation,summary,agreement}/v1.md`); budgets enforced by the negotiation orchestrator.
 
 ## 4. Room state machine
 
@@ -264,10 +269,20 @@ and no private content beyond the subscriber's authorization.
 - Feature folders mirror backend modules; typed API client generated from OpenAPI; a `RoomEventsService` multiplexes the STOMP stream into signals/RxJS.
 - Plain-language UX per design doc §11 (no internal jargon, one primary action, progressive disclosure, RTL/Hebrew default, WCAG 2.2 AA, 320px mobile support). The internal→user-facing wording table from the design doc is the copy source of truth.
 
-## 10. Local development & CI
+## 10. Cross-cutting hardening (Phase 6)
+
+- **Rate limiting** — in-memory fixed windows: per-IP budget on `/api/v1/auth/**`, per-user budget
+  on API writes; controlled 429. Single-instance by design (Redis when scaling out).
+- **Pagination** — `limit` params (capped at 500) on private messages, shared items, timeline, audit.
+- **Single-container hosting** — `Dockerfile.fullstack` bakes the Angular build into the image and
+  `SpaConfig` serves it with an index.html fallback (never swallowing `/api`, `/ws`, `/actuator`),
+  so UI + API + WebSocket share one origin in production. See [`deployment.md`](deployment.md).
+- **Seed data** — `SEED_DEMO=true` (local profile) creates four demo users and a ready discussion.
+
+## 11. Local development & CI
 
 - `docker-compose.yml`: MongoDB single-node replica set (idempotent auto-init via healthcheck script), backend, frontend.
 - `.env.example` with placeholder values only; `local` profile defaults to `FakeLlmProvider`.
 - Seed data: two demo parties, one observer, one advisor, one demo room.
 - Health/readiness endpoints (Spring Actuator) verifying Mongo connectivity.
-- CI: backend build + tests (Testcontainers), frontend lint + unit tests + build, Playwright E2E against the Fake provider.
+- CI (GitHub Actions): backend build + all tests (Testcontainers), frontend tests + build, `npm audit`, Syft SBOM artifact. The Playwright E2E for the §17 flow (`frontend/e2e/mvp-flow.spec.ts`) runs locally against the Fake provider (see README).

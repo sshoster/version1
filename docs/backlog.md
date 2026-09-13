@@ -82,3 +82,19 @@ doc §14.
 - [x] Basic performance validation (`PerformanceSmokeIT`: timeline + shared-items bounded by limit params and < 3s at 400/300 documents); pagination limits added to message/shared/timeline reads.
 - [x] Seed data (SEED_DEMO=true: four demo users + ready discussion) + demo scenario in README; Playwright E2E scaffold for the §17 flow (`frontend/e2e/mvp-flow.spec.ts`, run locally against the fake provider).
 - **Exit criteria (met):** the design doc's acceptance scenarios run green in CI as backend integration tests (69 tests); final report delivered per design doc §19.
+
+## Beyond the plan (owner-requested additions)
+
+- [x] Rebrand to **Bridge AI** (UI, email, docs).
+- [x] Email invitations with a bilingual styled message; `EmailSender` port with Gmail SMTP (local) and Brevo HTTPS (production — Render blocks SMTP).
+- [x] Invitations carry the invitee's first/last name → room display name; self-acceptance rejected without consuming the link.
+- [x] File attachments (≤50MB) with the message trust model; `FileStorage` port: local disk + S3-compatible (AWS S3 / Cloudflare R2 / MinIO); avatars with generated-initial fallback.
+- [x] Participants side panel with live per-room presence (🟢/🟡/⚪); hamburger menu (About, privacy explainer, Contact, language toggle); three-column room layout with sticky side panels; colored, categorized timeline.
+- [x] Public hosting package: single-container image (backend serves the SPA), `render.yaml` blueprint, deployment guide — live at https://bridge-ai-fuev.onrender.com (Render + MongoDB Atlas + Cloudflare R2).
+
+## Candidate next steps
+
+- "Hide my presence" privacy toggle; per-party advisor assignment; rename-me for invited display names.
+- CSP headers from the backend-served SPA; httpOnly-cookie sessions; Dependabot; ClamAV hook.
+- Redis-backed presence/rate-limit/outbox for horizontal scaling; custom email domain (DKIM); custom app domain.
+- Playwright E2E in CI; questions-to-other-party flow in negotiation rounds.

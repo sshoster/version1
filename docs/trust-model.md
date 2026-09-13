@@ -1,7 +1,8 @@
-# Trust Model — Trusted AI Negotiation Platform
+# Trust Model — Bridge AI (Trusted AI Negotiation Platform)
 
-Status: Phase 0 (design). These are **system invariants**: they are enforced server-side, covered by automated
-tests, and may not be weakened for UX or implementation convenience.
+Status: **implemented and test-enforced**. These are **system invariants**: they are enforced server-side,
+covered by automated tests (69 backend tests including all 22 acceptance scenarios and a
+role×action permission matrix), and may not be weakened for UX or implementation convenience.
 
 ---
 
@@ -106,7 +107,32 @@ Enforcement is **not** prompt-only. The orchestrator:
 - Two read models: a plain-language **timeline** for participants (filtered by their authorization) and a technical **audit view** for authorized roles; neither exposes private content beyond the reader's rights.
 - Every event carries actor type/ID, action, target, timestamp, audience-snapshot reference, correlation ID, and minimal non-sensitive metadata.
 
-## 8. What the system explicitly does NOT claim
+## 8. Files follow the same model
+
+Attachments (images/documents ≤50MB) obey the message invariants: PRIVATE to the uploader by
+default; sharing requires an explicit scope choice and freezes an audience snapshot; a shared file
+can be **withdrawn** (event kept, history intact) but never hard-deleted; only a still-private
+file can be truly deleted. Downloads go exclusively through an authorized endpoint; storage keys
+are randomized so the storage layer never sees user filenames; HTML/SVG types are excluded from
+the allowlist because browsers execute them.
+
+## 9. Implementation decisions recorded during delivery
+
+- **Invited display name (owner decision):** the inviter provides the invitee's first/last name,
+  which becomes that person's display name in the room (their registered name is only a fallback).
+  This trades self-controlled identity for onboarding clarity; a "rename me" affordance is a
+  candidate follow-up. Accepting your own invitation is rejected without consuming the link.
+- **Advisors are room-wide (MVP simplification):** `MY_ADVISORS` resolves to all active advisors
+  in the room; per-party advisor assignment awaits the permissions-matrix expansion.
+- **Presence is ephemeral UI state:** per-room online/recently-active indicators are held in
+  memory, visible to room members only, never persisted and never audited. A "hide my status"
+  toggle is a recommended follow-up given the dispute context.
+- **Outcome artifacts:** the AI-generated summary and agreement draft are built ONLY from material
+  every party can see; the approved-understandings artifact is assembled deterministically (no AI)
+  from all-party-approved proposal versions with per-party approval records (name, timestamp,
+  version, content hash).
+
+## 10. What the system explicitly does NOT claim
 
 - No legal advice; an in-app approval is not automatically a legally binding contract.
 - No qualified electronic signatures in the MVP (authenticated in-app approval + export only).

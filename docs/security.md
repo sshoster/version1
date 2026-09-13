@@ -1,8 +1,8 @@
-# Security & Threat Model — Trusted AI Negotiation Platform
+# Security & Threat Model — Bridge AI (Trusted AI Negotiation Platform)
 
-Status: Phase 0 (design). Companion to [`trust-model.md`](trust-model.md) (information-flow invariants) and
-[`architecture.md`](architecture.md) (mechanisms). Controls listed here are implemented and tested in Phases 1–6;
-the phase column shows where each lands.
+Status: **implemented** (all phases delivered). Companion to [`trust-model.md`](trust-model.md)
+(information-flow invariants) and [`architecture.md`](architecture.md) (mechanisms). The phase
+column shows where each control landed; §9 lists the honest remaining gaps.
 
 ---
 
@@ -71,10 +71,37 @@ the phase column shows where each lands.
 - Budgets enforced *before* each call; runs stop at budget with an explicit stop reason.
 - `FakeLlmProvider` is the default profile, so no key is required for dev/tests.
 
-## 8. Security testing plan
+## 8. Production posture (Render deployment)
 
-- Negative authorization tests for every endpoint and WebSocket subscription (acceptance tests 1, 6, 7, 15, 16).
-- Preview/confirm drift test (test 4), no-hard-delete test (test 5), AI-cannot-approve test (test 11).
-- Idempotency and optimistic-lock conflict tests (tests 14, 21, 22).
-- Permission-matrix suite (role × action × scope) in Phase 6.
-- Prompt-injection regression suite: adversarial fixtures through `FakeLlmProvider` scenarios validating server-side rejection (tests 8, 9).
+- Secrets (`JWT_SECRET`, `APP_ENCRYPTION_KEY`, `MONGODB_URI`, `S3_*` keys, `OPENAI_API_KEY`,
+  `BREVO_API_KEY`) live only in Render's encrypted environment and the developer's local
+  gitignored `.env` — never in the repository (`render.yaml` uses `sync: false` placeholders).
+- TLS terminates at Render; MongoDB Atlas enforces TLS + SCRAM auth; R2 access uses scoped API
+  tokens (separate dev/prod buckets recommended).
+- Email goes over HTTPS (Brevo) in production because the host blocks outbound SMTP; the Gmail
+  SMTP path remains for local development. Neither path ever logs message content.
+- Rate limiting is active by default (per-IP auth budget, per-user write budget → 429).
+
+## 9. Known gaps / accepted residual risk
+
+- **CSP headers** ship via nginx in the docker-compose frontend, but the single-container Render
+  deployment (backend-served SPA) does not yet emit CSP — Angular's default escaping and the
+  API-only backend mitigate; adding the headers to `SpaConfig` responses is a cheap follow-up.
+- **Refresh tokens in `localStorage`** — acceptable for MVP; httpOnly-cookie session is the
+  hardening path.
+- **Backend dependency scanning** — `npm audit` + Syft SBOM run in CI; OWASP dependency-check for
+  the JVM side is deferred (requires an NVD API key) — enable GitHub Dependabot on the repo.
+- **Single-instance seams** — presence, rate limiting, and outbox claiming are in-memory; scaling
+  out requires a shared store first.
+- **Malware scanning** — the hook interface exists (`MalwareScanner`); production engine (e.g.
+  ClamAV) not wired.
+
+## 10. Security testing plan
+
+All of the following are implemented and green in CI (69 backend tests):
+
+- Negative authorization tests for every endpoint and WebSocket subscription (acceptance tests 1, 6, 7, 15, 16) plus the Phase 6 permission matrix (`PermissionMatrixIT`: 6 roles × 22 actions; non-members always 404, anonymous always 401).
+- Preview/confirm drift (test 4), no-hard-delete/withdraw (test 5, messages and files), AI-cannot-approve (test 11).
+- Idempotency and optimistic-lock conflicts (tests 14, 21, 22); rate-limit 429 behavior (`RateLimitIT`).
+- Prompt-injection fixtures: `ContextInjectionTest` (participant content is flattened data that cannot forge agent-context sections) and the fact-reference rejection in `NegotiationFlowIT` (citing unshared content fails the run with SAFETY).
+- Field-encryption round-trip and tamper rejection (`AesGcmFieldCipherTest`); email HTML-escaping (`InvitationEmailComposerTest`).
