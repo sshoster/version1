@@ -9,6 +9,7 @@ and no agreement is approved without explicit human confirmation.
 - Trust model (system invariants): [docs/trust-model.md](docs/trust-model.md)
 - Security & threat model: [docs/security.md](docs/security.md)
 - Phased backlog: [docs/backlog.md](docs/backlog.md)
+- Public deployment guide (Render + Atlas + R2): [docs/deployment.md](docs/deployment.md)
 
 ## Repository layout
 
@@ -63,6 +64,12 @@ docker compose --profile app up --build
 ```
 
 Frontend at http://localhost:8081, backend at http://localhost:8080.
+
+## Public hosting
+
+A single-container image (`Dockerfile.fullstack`) serves the UI, API, and WebSocket from one
+origin; `render.yaml` is a ready Render blueprint. See [docs/deployment.md](docs/deployment.md)
+for the full walkthrough (Render + MongoDB Atlas free tier + Cloudflare R2).
 
 ## Demo data
 

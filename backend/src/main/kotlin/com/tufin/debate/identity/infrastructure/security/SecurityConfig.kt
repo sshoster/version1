@@ -35,14 +35,12 @@ class SecurityConfig(
                     .requestMatchers(
                         "/api/v1/auth/**",
                         "/api/v1/invitations/*", // minimal pre-acceptance info; accept itself is authenticated
-                        "/ws/**", // WebSocket handshake; auth happens on the STOMP CONNECT frame
-                        "/actuator/health/**",
-                        "/actuator/health",
-                        "/v3/api-docs/**",
-                        "/swagger-ui/**",
-                        "/swagger-ui.html",
                     ).permitAll()
-                    .anyRequest().authenticated()
+                    // Every other API endpoint requires an authenticated principal.
+                    .requestMatchers("/api/**").authenticated()
+                    // Everything else: WS handshake (auth on the STOMP CONNECT frame), health,
+                    // OpenAPI, and the statically served SPA in single-container deployments.
+                    .anyRequest().permitAll()
             }
             .exceptionHandling { it.authenticationEntryPoint(HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)) }
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)

@@ -1,0 +1,55 @@
+# Render blueprint (https://render.com/docs/blueprint-spec).
+# Deploy: Render dashboard → New → Blueprint → pick this repo. Fill in the sync:false values
+# (docs/deployment.md walks through every one).
+services:
+  - type: web
+    name: bridge-ai
+    runtime: docker
+    dockerfilePath: ./Dockerfile.fullstack
+    dockerContext: .
+    plan: free # switch to "starter" for an always-on instance (free sleeps after idle)
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        generateValue: true
+      # base64 of 32 random bytes — generate with: openssl rand -base64 32
+      - key: APP_ENCRYPTION_KEY
+        sync: false
+      # MongoDB Atlas SRV connection string, e.g.
+      # mongodb+srv://USER:PASS@cluster.xxxxx.mongodb.net/debate?retryWrites=true&w=majority
+      - key: MONGODB_URI
+        sync: false
+      # Public URL of this service (used in invitation links/emails), e.g. https://bridge-ai.onrender.com
+      - key: APP_BASE_URL
+        sync: false
+      # --- Files: Cloudflare R2 (S3-compatible) ---
+      - key: STORAGE_PROVIDER
+        value: s3
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false # https://<accountid>.r2.cloudflarestorage.com
+      - key: S3_REGION
+        value: auto
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_PATH_STYLE
+        value: "true"
+      # --- AI (optional: leave provider as fake to run without a key) ---
+      - key: LLM_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      # --- Email invitations (optional) ---
+      - key: MAIL_ENABLED
+        value: "false"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false

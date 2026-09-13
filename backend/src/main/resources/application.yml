@@ -106,6 +106,8 @@ app:
     writes-per-minute: 120
   seed:
     enabled: ${SEED_DEMO:false}
+  # Single-container hosting: directory of the built Angular app (empty = not served here).
+  static-dir: ${APP_STATIC_DIR:}
 
 logging:
   pattern:
