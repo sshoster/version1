@@ -8,4 +8,5 @@ import org.springframework.stereotype.Service
 @Service
 class RoomDirectory(private val rooms: DiscussionRoomRepository) {
     fun find(roomId: String): DiscussionRoom? = rooms.findById(roomId).orElse(null)
+    fun findByJoinCode(joinCode: String): DiscussionRoom? = rooms.findByJoinCode(joinCode)
 }

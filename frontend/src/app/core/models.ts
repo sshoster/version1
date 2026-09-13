@@ -35,9 +35,19 @@ export interface RoomResponse {
   objective: string | null;
   status: RoomStatus;
   ownerUserId: string;
+  joinCode: string | null;
   myRoles: ParticipantRole[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface JoinRequestView {
+  id: string;
+  roomId: string;
+  roomTitle: string;
+  displayName: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: string;
 }
 
 export interface ParticipantResponse {

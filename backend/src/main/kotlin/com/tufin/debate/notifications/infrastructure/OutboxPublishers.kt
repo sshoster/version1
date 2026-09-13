@@ -24,6 +24,7 @@ class WebSocketOutboxPublisher(private val messagingTemplate: SimpMessagingTempl
         private val AUDIENCE_SCOPED_TYPES = setOf(
             "SHARED_ITEM_PUBLISHED", "SHARED_ITEM_WITHDRAWN", "QUESTION_CREATED",
             "APPROVAL_REQUESTED", "APPROVAL_RECORDED", "FILE_SHARED", "FILE_WITHDRAWN",
+            "JOIN_REQUESTED", "JOIN_REQUEST_DECIDED",
         )
     }
 
@@ -56,6 +57,7 @@ class NotificationOutboxPublisher(private val notifications: NotificationReposit
         private val NOTIFYING_TYPES = setOf(
             "SHARED_ITEM_PUBLISHED", "SHARED_ITEM_WITHDRAWN", "QUESTION_CREATED",
             "APPROVAL_REQUESTED", "APPROVAL_RECORDED", "FILE_SHARED",
+            "JOIN_REQUESTED", "JOIN_REQUEST_DECIDED",
         )
     }
 

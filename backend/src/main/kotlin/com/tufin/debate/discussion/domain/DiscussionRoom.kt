@@ -48,9 +48,22 @@ class DiscussionRoom(
     var title: String,
     var objective: String?,
     var status: RoomStatus,
+    /** The creator — the one admin whose admin role can never be removed. */
     val ownerUserId: String,
+    /** Short join code; anyone with it may REQUEST to join, an admin approves (nullable only for pre-migration docs). */
+    var joinCode: String? = null,
     val schemaVersion: Int = 1,
     val createdAt: Instant,
     var updatedAt: Instant,
     @Version var version: Long? = null,
 )
+
+object JoinCodes {
+    /** Unambiguous alphabet (no 0/O/1/I/L). */
+    private const val ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+    private val random = java.security.SecureRandom()
+
+    fun generate(): String = (1..6).map { ALPHABET[random.nextInt(ALPHABET.length)] }.joinToString("")
+
+    fun normalize(code: String): String = code.trim().uppercase().replace("-", "").replace(" ", "")
+}

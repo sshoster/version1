@@ -3,6 +3,7 @@ package com.tufin.debate.participants.application
 import com.tufin.debate.audit.application.AuditActions
 import com.tufin.debate.audit.application.AuditService
 import com.tufin.debate.audit.domain.ActorType
+import com.tufin.debate.discussion.application.RoomDirectory
 import com.tufin.debate.identity.application.AuthenticatedUser
 import com.tufin.debate.participants.domain.Participant
 import com.tufin.debate.participants.domain.ParticipantRole
@@ -22,6 +23,7 @@ class ParticipantService(
     private val directory: ParticipantDirectory,
     private val auditService: AuditService,
     private val outboxService: OutboxService,
+    private val rooms: RoomDirectory,
 ) {
     fun list(roomId: String, actor: AuthenticatedUser): List<Participant> {
         permissions.requireParticipant(roomId, actor.userId)
@@ -40,11 +42,14 @@ class ParticipantService(
             ?: throw NotFoundException("This participant was not found")
 
         if (roles.isEmpty()) throw BadRequestException("A participant needs at least one role")
-        if (ParticipantRole.OWNER in participant.roles) {
-            throw ForbiddenException("The discussion owner's roles cannot be changed here")
+        // Admins (OWNER role) may promote/demote other admins, with two guardrails:
+        // the creator can never be demoted, and nobody edits their own roles.
+        if (participant.userId == actor.userId) {
+            throw ForbiddenException("You cannot change your own roles")
         }
-        if (ParticipantRole.OWNER in roles) {
-            throw ForbiddenException("Ownership cannot be granted through this action")
+        val creatorId = rooms.find(roomId)?.ownerUserId
+        if (participant.userId == creatorId && ParticipantRole.OWNER !in roles) {
+            throw ForbiddenException("The discussion creator stays an admin")
         }
 
         val before = participant.roles.toSortedSet().joinToString(",")

@@ -5,6 +5,7 @@ import {
   InvitationCreated,
   InvitationPublicInfo,
   InvitationSummary,
+  JoinRequestView,
   ParticipantResponse,
   ParticipantRole,
   PresenceEntry,
@@ -52,6 +53,30 @@ export class RoomsService {
 
   presence(roomId: string): Observable<PresenceEntry[]> {
     return this.http.get<PresenceEntry[]>(`/api/v1/rooms/${roomId}/presence`);
+  }
+
+  joinByCode(code: string): Observable<JoinRequestView> {
+    return this.http.post<JoinRequestView>('/api/v1/join-requests', { code });
+  }
+
+  myJoinRequests(): Observable<JoinRequestView[]> {
+    return this.http.get<JoinRequestView[]>('/api/v1/join-requests/mine');
+  }
+
+  joinRequests(roomId: string): Observable<JoinRequestView[]> {
+    return this.http.get<JoinRequestView[]>(`/api/v1/rooms/${roomId}/join-requests`);
+  }
+
+  approveJoin(roomId: string, requestId: string, role: ParticipantRole): Observable<JoinRequestView> {
+    return this.http.post<JoinRequestView>(`/api/v1/rooms/${roomId}/join-requests/${requestId}/approve`, { role });
+  }
+
+  rejectJoin(roomId: string, requestId: string): Observable<JoinRequestView> {
+    return this.http.post<JoinRequestView>(`/api/v1/rooms/${roomId}/join-requests/${requestId}/reject`, {});
+  }
+
+  updateParticipantRoles(roomId: string, participantId: string, roles: ParticipantRole[]): Observable<ParticipantResponse> {
+    return this.http.patch<ParticipantResponse>(`/api/v1/rooms/${roomId}/participants/${participantId}`, { roles });
   }
 
   invitationInfo(token: string): Observable<InvitationPublicInfo> {

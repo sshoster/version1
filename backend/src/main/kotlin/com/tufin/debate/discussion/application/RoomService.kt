@@ -40,10 +40,21 @@ class RoomService(
             objective = objective?.trim()?.takeIf { it.isNotEmpty() },
             status = RoomStatus.DRAFT,
             ownerUserId = actor.userId,
+            joinCode = com.tufin.debate.discussion.domain.JoinCodes.generate(),
             createdAt = now,
             updatedAt = now,
         )
-        rooms.insert(room)
+        // Join codes are short: retry on the (rare) unique-index collision.
+        var attempts = 0
+        while (true) {
+            try {
+                rooms.insert(room)
+                break
+            } catch (e: org.springframework.dao.DuplicateKeyException) {
+                if (++attempts >= 5) throw e
+                room.joinCode = com.tufin.debate.discussion.domain.JoinCodes.generate()
+            }
+        }
 
         // The creator is both the room OWNER and a primary PARTY.
         val ownerRoles = mutableSetOf(ParticipantRole.OWNER, ParticipantRole.PARTY)

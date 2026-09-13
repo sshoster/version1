@@ -19,6 +19,10 @@ Live deployment: https://bridge-ai-fuev.onrender.com
   (owner, party, advisor, observer), and plain-language Hebrew-first UI (English toggle, full RTL).
 - **Invitations**: single-use hashed links with expiry and revocation; inviter provides the
   invitee's name (becomes their room display name); optional bilingual invitation email.
+- **Join by code**: every room has a short join code (shown next to the room title, one-tap copy);
+  a registered user enters it on the home page to request access, and a room admin approves
+  (choosing the role: party / advisor / observer) or rejects. Admins can also promote other
+  participants to admin (the creator can never be demoted).
 - **Private AI assistant** per party: encrypted private notes, automatic calm rewording
   suggestions, private guidance (goals/boundaries/flexibility) feeding the negotiation.
 - **Controlled sharing**: choose exactly who sees each message (parties / everyone / my advisors /

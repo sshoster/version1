@@ -11,6 +11,7 @@ import { RoomsService } from '../../core/rooms.service';
 import { AssistantPanelComponent } from './assistant-panel.component';
 import { FilesPanelComponent } from './files-panel.component';
 import { InviteCardComponent } from './invite-card.component';
+import { JoinRequestsCardComponent } from './join-requests-card.component';
 import { NegotiationPanelComponent } from './negotiation-panel.component';
 import { ParticipantsPanelComponent } from './participants-panel.component';
 import { ProposalsPanelComponent } from './proposals-panel.component';
@@ -29,7 +30,7 @@ import { TimelineComponent } from './timeline.component';
     RouterLink,
     AssistantPanelComponent, SharedPanelComponent, ShareDialogComponent,
     NegotiationPanelComponent, ParticipantsPanelComponent, ProposalsPanelComponent, TimelineComponent,
-    FilesPanelComponent, InviteCardComponent,
+    FilesPanelComponent, InviteCardComponent, JoinRequestsCardComponent,
   ],
   template: `
     <div class="page room-page">
@@ -40,6 +41,7 @@ import { TimelineComponent } from './timeline.component';
           <!-- Static start-side column (right in RTL): add people + files. -->
           <aside class="side-column start-col">
             @if (isOwner()) {
+              <app-join-requests-card [roomId]="roomId()" />
               <app-invite-card [roomId]="roomId()" (invited)="onInvited()" />
             }
             <app-files-panel
@@ -61,6 +63,11 @@ import { TimelineComponent } from './timeline.component';
                 }
               </div>
               <p class="status">{{ i18n.t('status.' + r.status) }}</p>
+              @if (r.joinCode) {
+                <button class="code-chip" type="button" (click)="copyCode(r.joinCode!)" [attr.aria-label]="i18n.t('join.codeLabel')">
+                  {{ codeCopied() ? i18n.t('join.codeCopied') : i18n.t('join.codeLabel') + ': ' + r.joinCode + ' ⧉' }}
+                </button>
+              }
               @if (r.objective) {
                 <p class="muted objective">{{ r.objective }}</p>
               }
@@ -124,7 +131,10 @@ import { TimelineComponent } from './timeline.component';
 
           <!-- Static end-side column (left in RTL): who is here, live. -->
           <aside class="side-column end-col">
-            <app-participants-panel [roomId]="roomId()" [isOwner]="isOwner()" />
+            <app-participants-panel
+              [roomId]="roomId()" [isOwner]="isOwner()"
+              [creatorUserId]="r.ownerUserId" [myUserId]="auth.user()?.id ?? ''"
+            />
           </aside>
         </div>
       }
@@ -146,7 +156,14 @@ import { TimelineComponent } from './timeline.component';
     .room-layout { display: flex; flex-direction: column; gap: var(--space-3); }
     .main-column { flex: 1; min-width: 0; order: 1; }
     .start-col { order: 2; }
-    .end-col { order: 3; }
+    /* Mobile: participants strip on top of the page. */
+    .end-col { order: 0; }
+    .code-chip {
+      display: inline-flex; align-items: center; margin-block-start: var(--space-1);
+      border: 1px dashed var(--color-border); background: var(--color-bg); color: var(--color-text);
+      border-radius: 999px; padding: 4px 14px; font: inherit; font-size: 0.85rem; cursor: pointer;
+    }
+    .code-chip:hover { border-color: var(--color-primary); }
     .side-column { display: flex; flex-direction: column; gap: var(--space-3); }
     @media (min-width: 1000px) {
       .room-layout { flex-direction: row; align-items: flex-start; }
@@ -192,6 +209,9 @@ export class RoomPage {
   private readonly proposalsPanel = viewChild(ProposalsPanelComponent);
   private readonly filesPanel = viewChild(FilesPanelComponent);
   private readonly timeline = viewChild(TimelineComponent);
+  private readonly joinRequestsCard = viewChild(JoinRequestsCardComponent);
+
+  protected readonly codeCopied = signal(false);
 
   protected readonly isOwner = computed(() => this.room()?.myRoles.includes('OWNER') ?? false);
   protected readonly isAdvisor = computed(() => this.room()?.myRoles.includes('ADVISOR') ?? false);
@@ -244,6 +264,11 @@ export class RoomPage {
             case 'FILE_WITHDRAWN':
               this.filesPanel()?.refresh();
               break;
+            case 'JOIN_REQUESTED':
+            case 'JOIN_REQUEST_DECIDED':
+              this.joinRequestsCard()?.refresh();
+              this.participantsPanel()?.refresh();
+              break;
           }
           this.timeline()?.refreshIfOpen();
         });
@@ -275,6 +300,13 @@ export class RoomPage {
           : action === 'close' ? this.outcomesService.closeRoom(id)
             : this.outcomesService.reopenRoom(id);
     call.subscribe({ next: () => this.reloadRoom(id), error: () => this.reloadRoom(id) });
+  }
+
+  protected copyCode(code: string): void {
+    void navigator.clipboard.writeText(code).then(() => {
+      this.codeCopied.set(true);
+      setTimeout(() => this.codeCopied.set(false), 2000);
+    });
   }
 
   protected onInvited(): void {

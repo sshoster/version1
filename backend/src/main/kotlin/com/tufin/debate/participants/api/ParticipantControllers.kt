@@ -101,6 +101,51 @@ class InvitationController(private val invitationService: InvitationService) {
     ) = invitationService.revoke(roomId, invitationId, user)
 }
 
+data class JoinByCodeRequest(
+    @field:jakarta.validation.constraints.NotBlank @field:jakarta.validation.constraints.Size(max = 20)
+    val code: String = "",
+)
+
+data class DecideJoinRequest(
+    @field:NotNull val role: ParticipantRole = ParticipantRole.PARTY,
+)
+
+@RestController
+class JoinRequestController(private val joinRequests: com.tufin.debate.participants.application.JoinRequestService) {
+
+    /** Ask to join a discussion by its join code — creates a PENDING request for admin review. */
+    @PostMapping("/api/v1/join-requests")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun request(
+        @RequestBody @Valid request: JoinByCodeRequest,
+        @AuthenticationPrincipal user: AuthenticatedUser,
+    ) = joinRequests.request(user, request.code)
+
+    @GetMapping("/api/v1/join-requests/mine")
+    fun mine(@AuthenticationPrincipal user: AuthenticatedUser) = joinRequests.myPending(user)
+
+    @GetMapping("/api/v1/rooms/{roomId}/join-requests")
+    fun pending(
+        @PathVariable roomId: String,
+        @AuthenticationPrincipal user: AuthenticatedUser,
+    ) = joinRequests.pendingForRoom(roomId, user)
+
+    @PostMapping("/api/v1/rooms/{roomId}/join-requests/{requestId}/approve")
+    fun approve(
+        @PathVariable roomId: String,
+        @PathVariable requestId: String,
+        @RequestBody @Valid request: DecideJoinRequest,
+        @AuthenticationPrincipal user: AuthenticatedUser,
+    ) = joinRequests.approve(roomId, requestId, user, request.role)
+
+    @PostMapping("/api/v1/rooms/{roomId}/join-requests/{requestId}/reject")
+    fun reject(
+        @PathVariable roomId: String,
+        @PathVariable requestId: String,
+        @AuthenticationPrincipal user: AuthenticatedUser,
+    ) = joinRequests.reject(roomId, requestId, user)
+}
+
 @RestController
 class ParticipantController(private val participantService: ParticipantService) {
 

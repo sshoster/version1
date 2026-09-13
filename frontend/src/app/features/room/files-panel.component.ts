@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FileView, FilesService } from '../../core/files.service';
@@ -12,7 +12,7 @@ import { AvatarComponent } from '../../shared/avatar.component';
  */
 @Component({
   selector: 'app-files-panel',
-  imports: [FormsModule, DatePipe, DecimalPipe, AvatarComponent],
+  imports: [FormsModule, DecimalPipe, AvatarComponent],
   template: `
     <div class="card stack">
       <div class="head-row">
@@ -25,7 +25,7 @@ import { AvatarComponent } from '../../shared/avatar.component';
           </label>
         }
       </div>
-      <p class="muted small">{{ i18n.t('files.uploadHint') }}</p>
+      <p class="muted small hint-line">{{ i18n.t('files.uploadHint') }}</p>
       @if (error()) {
         <div class="error-box" role="alert">{{ error() }}</div>
       }
@@ -40,9 +40,9 @@ import { AvatarComponent } from '../../shared/avatar.component';
           <div class="file-row" [class.withdrawn]="file.status === 'WITHDRAWN'">
             <span class="icon">{{ file.kind === 'IMAGE' ? '🖼️' : '📄' }}</span>
             <div class="meta">
-              <strong>{{ file.filename }}</strong>
+              <strong class="fname">{{ file.filename }}</strong>
               <span class="muted small">
-                {{ file.sizeBytes / 1024 / 1024 | number: '1.0-2' }}MB · {{ file.createdAt | date: 'short' }} ·
+                {{ file.sizeBytes / 1024 / 1024 | number: '1.0-2' }}MB ·
                 @switch (file.status) {
                   @case ('PRIVATE') { 🔒 {{ i18n.t('files.private') }} }
                   @case ('SHARED') { 👥 {{ i18n.t('scope.' + file.scope) }} }
@@ -51,14 +51,16 @@ import { AvatarComponent } from '../../shared/avatar.component';
               </span>
             </div>
             <div class="row-actions">
-              <button class="btn btn-quiet" type="button" (click)="download(file)">{{ i18n.t('files.download') }}</button>
+              <button class="icon-btn" type="button" (click)="download(file)"
+                      [title]="i18n.t('files.download')" [attr.aria-label]="i18n.t('files.download')">⬇️</button>
               @if (file.status === 'PRIVATE') {
-                <button class="btn btn-secondary" type="button" (click)="sharingId.set(sharingId() === file.id ? null : file.id)">
-                  {{ i18n.t('files.share') }}
-                </button>
-                <button class="btn btn-quiet" type="button" (click)="deletePrivate(file)">{{ i18n.t('files.delete') }}</button>
+                <button class="icon-btn" type="button" (click)="sharingId.set(sharingId() === file.id ? null : file.id)"
+                        [title]="i18n.t('files.share')" [attr.aria-label]="i18n.t('files.share')">👥</button>
+                <button class="icon-btn" type="button" (click)="deletePrivate(file)"
+                        [title]="i18n.t('files.delete')" [attr.aria-label]="i18n.t('files.delete')">🗑️</button>
               } @else if (file.status === 'SHARED') {
-                <button class="btn btn-quiet" type="button" (click)="withdraw(file)">{{ i18n.t('files.withdraw') }}</button>
+                <button class="icon-btn" type="button" (click)="withdraw(file)"
+                        [title]="i18n.t('files.withdraw')" [attr.aria-label]="i18n.t('files.withdraw')">↩️</button>
               }
             </div>
             @if (sharingId() === file.id) {
@@ -92,15 +94,15 @@ import { AvatarComponent } from '../../shared/avatar.component';
         <h3>{{ i18n.t('files.shared') }}</h3>
         @for (file of sharedWithMe(); track file.id) {
           <div class="file-row">
-            <app-avatar [userId]="file.ownerUserId" [name]="file.ownerDisplayName" [size]="28" />
+            <app-avatar [userId]="file.ownerUserId" [name]="file.ownerDisplayName" [size]="22" />
             <div class="meta">
-              <strong>{{ file.filename }}</strong>
+              <strong class="fname">{{ file.filename }}</strong>
               <span class="muted small">
-                {{ i18n.t('files.sharedBy', file.ownerDisplayName) }} ·
-                {{ file.sizeBytes / 1024 / 1024 | number: '1.0-2' }}MB · {{ file.sharedAt | date: 'short' }}
+                {{ file.ownerDisplayName }} · {{ file.sizeBytes / 1024 / 1024 | number: '1.0-2' }}MB
               </span>
             </div>
-            <button class="btn btn-quiet" type="button" (click)="download(file)">{{ i18n.t('files.download') }}</button>
+            <button class="icon-btn" type="button" (click)="download(file)"
+                    [title]="i18n.t('files.download')" [attr.aria-label]="i18n.t('files.download')">⬇️</button>
           </div>
         }
       }
@@ -108,23 +110,31 @@ import { AvatarComponent } from '../../shared/avatar.component';
   `,
   styles: `
     .head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-    .head-row h2 { margin: 0; }
-    h3 { font-size: 0.95rem; margin: var(--space-2) 0 0; }
-    .small { font-size: 0.82rem; }
+    .head-row h2 { margin: 0; font-size: 1rem; }
+    h3 { font-size: 0.82rem; margin: var(--space-1) 0 0; color: var(--color-text-muted); }
+    .small { font-size: 0.72rem; }
     .file-row {
-      display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
-      border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-2) var(--space-3);
+      display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap;
+      border-block-end: 1px solid var(--color-border); padding: 4px 2px;
     }
+    .file-row:last-child { border-block-end: none; }
     .file-row.withdrawn { opacity: 0.65; }
-    .icon { font-size: 1.3rem; }
-    .meta { flex: 1; min-width: 160px; display: flex; flex-direction: column; }
-    .row-actions { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+    .icon { font-size: 1rem; }
+    .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+    .fname, .meta strong { font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+    .row-actions { display: flex; gap: 2px; }
+    .icon-btn {
+      border: none; background: none; cursor: pointer; font-size: 0.95rem;
+      min-width: 30px; min-height: 30px; border-radius: 8px; padding: 0;
+    }
+    .icon-btn:hover { background: var(--color-bg); }
     .share-box {
       flex-basis: 100%; background: var(--color-bg); border-radius: var(--radius);
       padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);
     }
     .recipient-option { display: flex; gap: var(--space-2); align-items: center; min-height: 36px; }
-    .upload-btn { cursor: pointer; }
+    .upload-btn { cursor: pointer; min-height: 36px; font-size: 0.85rem; padding: 0 var(--space-3); }
+    .hint-line { margin: 0; }
   `,
 })
 export class FilesPanelComponent {
