@@ -54,6 +54,7 @@ export interface InvitationCreated {
   roomId: string;
   role: ParticipantRole;
   email: string | null;
+  invitedName: string | null;
   expiresAt: string;
   token: string;
   acceptUrl: string;
@@ -64,6 +65,7 @@ export interface InvitationSummary {
   id: string;
   role: ParticipantRole;
   email: string | null;
+  invitedName: string | null;
   status: InvitationStatus;
   expiresAt: string;
   createdAt: string;
@@ -75,6 +77,13 @@ export interface InvitationPublicInfo {
   status: InvitationStatus;
   expiresAt: string;
   invitedBy: string;
+  invitedName: string | null;
+}
+
+export interface PresenceEntry {
+  userId: string;
+  online: boolean;
+  lastSeenAt: string | null;
 }
 
 export type VisibilityScope =
@@ -136,6 +145,71 @@ export interface RoomEvent {
   occurredAt: string;
   resourceId: string | null;
   resourceVersion: number | null;
+}
+
+export type RunStatus = 'RUNNING' | 'WAITING_FOR_USER' | 'PAUSED' | 'COMPLETED' | 'FAILED';
+
+export type RunStopReason =
+  | 'NONE'
+  | 'MISSING_INFO'
+  | 'NEW_CONCESSION'
+  | 'SENSITIVE_DISCLOSURE'
+  | 'POSSIBLE_AGREEMENT'
+  | 'DEADLOCK'
+  | 'MAX_TURNS'
+  | 'SAFETY'
+  | 'BUDGET_EXCEEDED'
+  | 'PROVIDER_ERROR';
+
+export interface TurnProposal {
+  title: string;
+  terms: string[];
+  assumptions: string[];
+  openIssues: string[];
+}
+
+export interface RoundResult {
+  agreedPoints: string[];
+  unresolvedPoints: string[];
+  proposalsConsidered: string[];
+  assumptions: string[];
+  recommendedProposal: TurnProposal | null;
+  stopReason: RunStopReason;
+}
+
+export interface NegotiationTurnView {
+  turnNumber: number;
+  partyDisplayName: string;
+  publicMessage: string | null;
+  proposal: TurnProposal | null;
+  questionsForOtherParty: string[];
+  createdAt: string;
+}
+
+export interface QuestionView {
+  id: string;
+  text: string;
+  status: 'OPEN' | 'ANSWERED';
+  createdAt: string;
+}
+
+export interface NegotiationRunView {
+  id: string;
+  status: RunStatus;
+  stopReason: RunStopReason;
+  turnCount: number;
+  maxTurns: number;
+  result: RoundResult | null;
+  turns: NegotiationTurnView[];
+  myOpenQuestions: QuestionView[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentProfile {
+  goals: string;
+  boundaries: string;
+  flexibility: string;
 }
 
 export interface ApiError {

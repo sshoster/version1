@@ -73,6 +73,15 @@ app:
     key: ${APP_ENCRYPTION_KEY:}
   llm:
     provider: ${LLM_PROVIDER:fake}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_MODEL:gpt-5.6-luna}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      timeout-seconds: 60
+  negotiation:
+    max-turns: ${NEGOTIATION_MAX_TURNS:10}
+    max-total-tokens: ${NEGOTIATION_MAX_TOKENS:20000}
+    max-run-seconds: ${NEGOTIATION_MAX_SECONDS:180}
   outbox:
     poll-interval-ms: 2000
 

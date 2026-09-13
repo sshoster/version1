@@ -7,6 +7,8 @@ import { InvitationCreated, ParticipantResponse, ParticipantRole, RoomResponse }
 import { RoomEventsService } from '../../core/room-events.service';
 import { RoomsService } from '../../core/rooms.service';
 import { AssistantPanelComponent } from './assistant-panel.component';
+import { NegotiationPanelComponent } from './negotiation-panel.component';
+import { ParticipantsPanelComponent } from './participants-panel.component';
 import { ShareDialogComponent, ShareIntent } from './share-dialog.component';
 import { SharedPanelComponent } from './shared-panel.component';
 
@@ -16,18 +18,24 @@ import { SharedPanelComponent } from './shared-panel.component';
  */
 @Component({
   selector: 'app-room-page',
-  imports: [FormsModule, AssistantPanelComponent, SharedPanelComponent, ShareDialogComponent],
+  imports: [
+    FormsModule, AssistantPanelComponent, SharedPanelComponent, ShareDialogComponent,
+    NegotiationPanelComponent, ParticipantsPanelComponent,
+  ],
   template: `
-    <div class="page stack">
+    <div class="page room-page">
       @if (loading()) {
         <p class="muted">{{ i18n.t('common.loading') }}</p>
       } @else if (room(); as r) {
+        <div class="room-layout">
+        <div class="stack main-column">
         <header class="card head">
           <h1>{{ r.title }}</h1>
           <p class="status">{{ i18n.t('status.' + r.status) }}</p>
         </header>
 
         @if (isParty()) {
+          <app-negotiation-panel [roomId]="roomId()" [roomStatus]="r.status" />
           <div class="tabs" role="tablist">
             <button
               role="tab" class="tab" [class.active]="tab() === 'shared'"
@@ -46,7 +54,7 @@ import { SharedPanelComponent } from './shared-panel.component';
 
         <div class="card">
           @if (tab() === 'assistant' && isParty()) {
-            <app-assistant-panel [roomId]="roomId()" (share)="openShare($event)" />
+            <app-assistant-panel [roomId]="roomId()" [roomStatus]="r.status" (share)="openShare($event)" />
           } @else {
             <app-shared-panel
               [roomId]="roomId()"
@@ -63,15 +71,6 @@ import { SharedPanelComponent } from './shared-panel.component';
             @if (r.objective) {
               <p class="muted"><strong>{{ i18n.t('room.objective') }}:</strong> {{ r.objective }}</p>
             }
-            <h2>{{ i18n.t('room.participants') }}</h2>
-            <ul class="participants">
-              @for (participant of participants(); track participant.id) {
-                <li>
-                  <strong>{{ participant.displayName }}</strong>
-                  <span class="muted"> — {{ roleNames(participant) }}</span>
-                </li>
-              }
-            </ul>
 
             @if (isOwner()) {
               <h2>{{ i18n.t('room.invite') }}</h2>
@@ -84,13 +83,24 @@ import { SharedPanelComponent } from './shared-panel.component';
                     <option value="OBSERVER">{{ i18n.t('room.role.OBSERVER') }}</option>
                   </select>
                 </div>
+                <div class="name-row">
+                  <div class="field">
+                    <label for="inviteFirstName">{{ i18n.t('invite.firstName') }}</label>
+                    <input id="inviteFirstName" name="inviteFirstName" type="text" [(ngModel)]="inviteFirstName" />
+                  </div>
+                  <div class="field">
+                    <label for="inviteLastName">{{ i18n.t('invite.lastName') }}</label>
+                    <input id="inviteLastName" name="inviteLastName" type="text" [(ngModel)]="inviteLastName" />
+                  </div>
+                </div>
+                <p class="hint">{{ i18n.t('invite.nameHint') }}</p>
                 <div class="field">
                   <label for="inviteEmail">{{ i18n.t('room.invite.email') }}</label>
                   <input id="inviteEmail" name="inviteEmail" type="email" dir="ltr" [(ngModel)]="inviteEmail" />
                   <span class="hint">{{ i18n.t('room.invite.emailHint') }}</span>
                 </div>
                 <p class="muted">{{ i18n.t('room.invite.explain') }}</p>
-                <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="invite()">
+                <button class="btn btn-primary" type="button" [disabled]="busy() || !inviteFirstName.trim()" (click)="invite()">
                   {{ i18n.t('room.invite.create') }}
                 </button>
               } @else {
@@ -108,6 +118,12 @@ import { SharedPanelComponent } from './shared-panel.component';
             }
           </div>
         </details>
+        </div>
+
+        <aside class="side-column">
+          <app-participants-panel [roomId]="roomId()" [isOwner]="isOwner()" />
+        </aside>
+        </div>
       }
     </div>
 
@@ -123,6 +139,16 @@ import { SharedPanelComponent } from './shared-panel.component';
     }
   `,
   styles: `
+    .room-page { max-width: 960px; }
+    .room-layout { display: flex; flex-direction: column-reverse; gap: var(--space-3); }
+    .main-column { flex: 1; min-width: 0; }
+    .side-column { flex-shrink: 0; }
+    @media (min-width: 900px) {
+      .room-layout { flex-direction: row; align-items: flex-start; }
+      .side-column { width: 250px; position: sticky; top: var(--space-3); }
+    }
+    .name-row { display: flex; gap: var(--space-2); }
+    .name-row .field { flex: 1; }
     .head h1 { margin-block-end: var(--space-1); }
     .status { margin: 0; color: var(--color-text-muted); }
     .tabs { display: flex; gap: var(--space-2); }
@@ -160,9 +186,13 @@ export class RoomPage {
 
   protected inviteRole: ParticipantRole = 'PARTY';
   protected inviteEmail = '';
+  protected inviteFirstName = '';
+  protected inviteLastName = '';
 
   private readonly sharedPanel = viewChild(SharedPanelComponent);
   private readonly assistantPanel = viewChild(AssistantPanelComponent);
+  private readonly negotiationPanel = viewChild(NegotiationPanelComponent);
+  private readonly participantsPanel = viewChild(ParticipantsPanelComponent);
 
   protected readonly isOwner = computed(() => this.room()?.myRoles.includes('OWNER') ?? false);
   protected readonly isParty = computed(() => {
@@ -187,10 +217,21 @@ export class RoomPage {
             case 'PARTICIPANT_JOINED':
               this.reloadParticipants(id);
               this.reloadRoom(id);
+              this.participantsPanel()?.refresh();
+              break;
+            case 'PRESENCE_CHANGED':
+              this.participantsPanel()?.refresh();
               break;
             case 'SHARED_ITEM_PUBLISHED':
             case 'SHARED_ITEM_WITHDRAWN':
               this.sharedPanel()?.load();
+              break;
+            case 'NEGOTIATION_STARTED':
+            case 'NEGOTIATION_TURN_COMPLETED':
+            case 'NEGOTIATION_WAITING_FOR_USER':
+            case 'QUESTION_CREATED':
+              this.negotiationPanel()?.refresh();
+              this.reloadRoom(id);
               break;
           }
         });
@@ -234,14 +275,20 @@ export class RoomPage {
   protected invite(): void {
     if (this.busy()) return;
     this.busy.set(true);
-    this.rooms.invite(this.roomId(), this.inviteRole, this.inviteEmail.trim() || null).subscribe({
-      next: (created) => {
-        this.invitation.set(created);
-        this.busy.set(false);
-        this.reloadRoom(this.roomId());
-      },
-      error: () => this.busy.set(false),
-    });
+    this.rooms
+      .invite(
+        this.roomId(), this.inviteRole, this.inviteEmail.trim() || null,
+        this.inviteFirstName.trim() || null, this.inviteLastName.trim() || null,
+      )
+      .subscribe({
+        next: (created) => {
+          this.invitation.set(created);
+          this.busy.set(false);
+          this.reloadRoom(this.roomId());
+          this.participantsPanel()?.refresh();
+        },
+        error: () => this.busy.set(false),
+      });
   }
 
   protected copyLink(): void {

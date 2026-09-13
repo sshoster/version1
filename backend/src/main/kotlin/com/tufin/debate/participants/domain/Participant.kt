@@ -33,6 +33,9 @@ class Invitation(
     @Id val id: String,
     val roomId: String,
     val email: String?,
+    /** Name given by the inviter; becomes the participant's display name in this room (owner decision). */
+    val invitedFirstName: String? = null,
+    val invitedLastName: String? = null,
     val role: ParticipantRole,
     val tokenHash: String,
     var status: InvitationStatus = InvitationStatus.PENDING,

@@ -4,8 +4,10 @@ import { Observable } from 'rxjs';
 import {
   InvitationCreated,
   InvitationPublicInfo,
+  InvitationSummary,
   ParticipantResponse,
   ParticipantRole,
+  PresenceEntry,
   RoomResponse,
 } from './models';
 
@@ -29,13 +31,27 @@ export class RoomsService {
     return this.http.get<ParticipantResponse[]>(`/api/v1/rooms/${roomId}/participants`);
   }
 
-  invite(roomId: string, role: ParticipantRole, email: string | null): Observable<InvitationCreated> {
+  invite(
+    roomId: string,
+    role: ParticipantRole,
+    email: string | null,
+    firstName: string | null = null,
+    lastName: string | null = null,
+  ): Observable<InvitationCreated> {
     const idempotencyKey = crypto.randomUUID();
     return this.http.post<InvitationCreated>(
       `/api/v1/rooms/${roomId}/invitations`,
-      { role, email },
+      { role, email, firstName, lastName },
       { headers: { 'Idempotency-Key': idempotencyKey } },
     );
+  }
+
+  invitations(roomId: string): Observable<InvitationSummary[]> {
+    return this.http.get<InvitationSummary[]>(`/api/v1/rooms/${roomId}/invitations`);
+  }
+
+  presence(roomId: string): Observable<PresenceEntry[]> {
+    return this.http.get<PresenceEntry[]>(`/api/v1/rooms/${roomId}/presence`);
   }
 
   invitationInfo(token: string): Observable<InvitationPublicInfo> {

@@ -14,7 +14,9 @@ import { RoomsService } from '../../core/rooms.service';
         @if (loading()) {
           <p class="muted">{{ i18n.t('common.loading') }}</p>
         } @else if (info(); as invitation) {
-          <h1>{{ i18n.t('invite.title') }} 💬</h1>
+          <h1>
+            {{ i18n.t('invite.title') }}@if (invitation.invitedName) {, {{ invitation.invitedName }}} 💬
+          </h1>
           <p><strong>{{ i18n.t('invite.roomLabel') }}:</strong> {{ invitation.roomTitle }}</p>
           <p><strong>{{ i18n.t('invite.invitedBy') }}:</strong> {{ invitation.invitedBy }}</p>
           <p><strong>{{ i18n.t('invite.asRole') }}:</strong> {{ i18n.t('room.role.' + invitation.role) }}</p>

@@ -131,6 +131,15 @@ class PrivateMessageService(
         return draft.toView(response.text)
     }
 
+    /**
+     * Internal read for the negotiation context builder: the user's own USER-authored notes,
+     * decrypted. Callers must pass only the userId whose agent context is being built.
+     */
+    fun notesFor(roomId: String, userId: String): List<String> =
+        messages.findByRoomIdAndAuthorUserIdOrderByCreatedAtAsc(roomId, userId)
+            .filter { it.sender == PrivateSender.USER }
+            .map { cipher.decrypt(it.text) }
+
     /** Internal lookup used by the sharing flow to validate draft-origin claims. */
     fun findOwnMessage(roomId: String, messageId: String, actor: AuthenticatedUser): Pair<PrivateMessage, String>? {
         val message = messages.findByIdAndRoomIdAndAuthorUserId(messageId, roomId, actor.userId) ?: return null

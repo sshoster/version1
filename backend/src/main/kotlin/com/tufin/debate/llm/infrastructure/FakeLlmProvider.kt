@@ -18,9 +18,12 @@ class FakeLlmProvider : LlmProvider {
     override val providerName = "fake"
     override val modelName = "fake-deterministic-1"
 
+    private val json = com.fasterxml.jackson.databind.json.JsonMapper.builder().build()
+
     override suspend fun generate(request: LlmRequest): LlmResponse {
         val text = when {
             request.templateId.startsWith("draft/") -> draft(request.user)
+            request.templateId.startsWith("negotiation/") -> negotiationTurn(request.user)
             else -> "תשובה לדוגמה עבור: ${request.user.take(120)}"
         }
         return LlmResponse(
@@ -31,6 +34,93 @@ class FakeLlmProvider : LlmProvider {
             outputTokens = text.length / 4,
             latencyMs = 1,
         )
+    }
+
+    /**
+     * Deterministic negotiation behavior, steerable by SCENARIO markers anywhere in the context
+     * (tests place them in the room objective):
+     *  - SCENARIO:MISSING_INFO — asks the own user a question (once), then proceeds normally.
+     *  - SCENARIO:SENSITIVE  — stops with SENSITIVE_DISCLOSURE.
+     *  - SCENARIO:LOOP       — never converges (exercises MAX_TURNS).
+     *  - SCENARIO:INVALID_FACT — cites a nonexistent shared-fact id (exercises server rejection).
+     *  - SCENARIO:PROVIDER_ERROR — throws (exercises clean failure handling).
+     *  - default             — proposes on the first turn, accepts once a proposal is on the table.
+     */
+    private fun negotiationTurn(context: String): String {
+        if (context.contains("SCENARIO:PROVIDER_ERROR")) {
+            throw IllegalStateException("Simulated provider outage")
+        }
+
+        val proposalOnTable = context.contains("PROPOSAL_ON_TABLE: yes")
+        val answeredQuestions = !context.contains("ANSWERED_QUESTIONS (answers from YOUR user; private):\n  (none)")
+        val firstFactId = Regex("SHARED_FACTS[^\\n]*\\n  - ([^ |]+) \\|").find(context)?.groupValues?.get(1)
+
+        val output: Map<String, Any?> = when {
+            context.contains("SCENARIO:SENSITIVE") -> mapOf(
+                "publicMessage" to null,
+                "proposal" to null,
+                "stopReason" to "SENSITIVE_DISCLOSURE",
+            )
+
+            // Only the opening assistant asks its user once; afterwards the flow proceeds normally.
+            context.contains("SCENARIO:MISSING_INFO") && !answeredQuestions && context.contains("CURRENT_TURN: 1") -> mapOf(
+                "publicMessage" to null,
+                "proposal" to null,
+                "questionsForOwnUser" to listOf("מה הסכום המקסימלי שנוח לך להציע?"),
+                "stopReason" to "MISSING_INFO",
+            )
+
+            context.contains("SCENARIO:INVALID_FACT") -> mapOf(
+                "publicMessage" to "מסתמך על עובדה",
+                "proposal" to null,
+                "sharedFactsUsed" to listOf("00000000-0000-0000-0000-000000000000"),
+                "stopReason" to "NONE",
+            )
+
+            context.contains("SCENARIO:LOOP") -> mapOf(
+                "publicMessage" to "נקודה נוספת לחידוד הדדי.",
+                "proposal" to null,
+                "sharedFactsUsed" to listOfNotNull(firstFactId),
+                "stopReason" to "NONE",
+            )
+
+            proposalOnTable -> mapOf(
+                "publicMessage" to "ההצעה נראית הוגנת לצד שלי. ממליץ/ה לאשר אותה.",
+                "proposal" to mapOf(
+                    "title" to "הסכמה מוצעת",
+                    "terms" to listOf("הצדדים מאשרים את ההצעה שעל השולחן"),
+                    "assumptions" to listOf("שני הצדדים מאשרים באופן עצמאי"),
+                    "openIssues" to emptyList<String>(),
+                ),
+                "sharedFactsUsed" to listOfNotNull(firstFactId),
+                "requiresUserApproval" to true,
+                "stopReason" to "POSSIBLE_AGREEMENT",
+            )
+
+            else -> mapOf(
+                "publicMessage" to "מציע/ה נקודת פתיחה מאוזנת לשני הצדדים.",
+                "proposal" to mapOf(
+                    "title" to "הצעת ביניים",
+                    "terms" to listOf("פשרה שוויונית על בסיס העובדות המשותפות"),
+                    "assumptions" to listOf("העובדות המשותפות מוסכמות"),
+                    "openIssues" to listOf("פרטים סופיים"),
+                ),
+                "sharedFactsUsed" to listOfNotNull(firstFactId),
+                "stopReason" to "NONE",
+            )
+        }
+
+        val base = mapOf(
+            "publicMessage" to null,
+            "proposal" to null,
+            "questionsForOwnUser" to emptyList<String>(),
+            "questionsForOtherParty" to emptyList<String>(),
+            "sharedFactsUsed" to emptyList<String>(),
+            "privateDataReferencedInternally" to false,
+            "requiresUserApproval" to true,
+            "stopReason" to "NONE",
+        )
+        return json.writeValueAsString(base + output)
     }
 
     /** Calm, structured rewording of the user's text — deterministic on purpose. */

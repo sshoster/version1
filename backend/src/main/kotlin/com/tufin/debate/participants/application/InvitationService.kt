@@ -37,6 +37,7 @@ data class InvitationCreated(
     val roomId: String,
     val role: ParticipantRole,
     val email: String?,
+    val invitedName: String? = null,
     val expiresAt: Instant,
     /** Returned exactly once; only its hash is stored. */
     val token: String,
@@ -51,6 +52,7 @@ data class InvitationPublicInfo(
     val status: InvitationStatus,
     val expiresAt: Instant,
     val invitedBy: String,
+    val invitedName: String? = null,
 )
 
 @Service
@@ -80,15 +82,18 @@ class InvitationService(
         actor: AuthenticatedUser,
         role: ParticipantRole,
         email: String?,
+        firstName: String?,
+        lastName: String?,
         idempotencyKey: String?,
     ): InvitationCreated =
         idempotencyService.execute(roomId, "INVITATION_CREATE", idempotencyKey, InvitationCreated::class.java) {
             // TransactionTemplate (not @Transactional) because this is a same-class call: a
             // self-invocation would bypass the Spring proxy and run without a transaction.
-            val created = transactionTemplate.execute { createInternal(roomId, actor, role, email) }!!
+            val created = transactionTemplate.execute { createInternal(roomId, actor, role, email, firstName, lastName) }!!
             // Email goes out only after the invitation committed; failure keeps the link usable.
             val sent = notifier.invitationCreated(
                 email = created.email,
+                recipientName = created.invitedName,
                 inviterName = actor.displayName,
                 roomTitle = rooms.find(roomId)?.title ?: "",
                 role = created.role.name,
@@ -103,6 +108,8 @@ class InvitationService(
         actor: AuthenticatedUser,
         role: ParticipantRole,
         email: String?,
+        firstName: String?,
+        lastName: String?,
     ): InvitationCreated {
         permissions.requireRole(roomId, actor.userId, ParticipantRole.OWNER)
         if (role !in INVITABLE_ROLES) {
@@ -116,6 +123,8 @@ class InvitationService(
             id = Ids.newId(),
             roomId = roomId,
             email = email?.trim()?.lowercase()?.takeIf { it.isNotEmpty() },
+            invitedFirstName = firstName?.trim()?.takeIf { it.isNotEmpty() },
+            invitedLastName = lastName?.trim()?.takeIf { it.isNotEmpty() },
             role = role,
             tokenHash = hash(rawToken),
             expiresAt = now.plus(Duration.ofDays(expiryDays)),
@@ -145,6 +154,7 @@ class InvitationService(
             roomId = roomId,
             role = role,
             email = invitation.email,
+            invitedName = invitedName(invitation),
             expiresAt = invitation.expiresAt,
             token = rawToken,
             acceptUrl = "${baseUrl.trimEnd('/')}/invite/$rawToken",
@@ -164,6 +174,7 @@ class InvitationService(
             status = invitation.status,
             expiresAt = invitation.expiresAt,
             invitedBy = inviter?.displayName ?: "A participant",
+            invitedName = invitedName(invitation),
         )
     }
 
@@ -188,7 +199,9 @@ class InvitationService(
                 roomId = invitation.roomId,
                 userId = actor.userId,
                 roles = mutableSetOf(invitation.role),
-                displayName = actor.displayName,
+                // Owner decision: the name given by the inviter is this room's display name;
+                // the registered name is the fallback when no name was provided.
+                displayName = invitedName(invitation) ?: actor.displayName,
                 joinedAt = Instant.now(),
             ),
         )
@@ -267,6 +280,11 @@ class InvitationService(
         }
         return invitation
     }
+
+    private fun invitedName(invitation: Invitation): String? =
+        listOfNotNull(invitation.invitedFirstName, invitation.invitedLastName)
+            .joinToString(" ")
+            .takeIf { it.isNotBlank() }
 
     private fun newToken(): String {
         val bytes = ByteArray(32)

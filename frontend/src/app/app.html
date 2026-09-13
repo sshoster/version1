@@ -1,13 +1,29 @@
 <header class="app-header">
   <a routerLink="/" class="brand">{{ i18n.t('app.title') }}</a>
-  @if (auth.isAuthenticated()) {
-    <div class="user-area">
+  <div class="user-area">
+    @if (auth.isAuthenticated()) {
       <span class="muted">{{ auth.user()?.displayName }}</span>
-      <button class="btn btn-quiet" type="button" (click)="signOut()">{{ i18n.t('app.signOut') }}</button>
-    </div>
-  }
+    }
+    <button
+      class="btn btn-quiet menu-button" type="button"
+      [attr.aria-label]="i18n.t('menu.open')" [attr.aria-expanded]="menuOpen()"
+      (click)="menuOpen.set(!menuOpen())"
+    >☰</button>
+  </div>
 </header>
 
-<main>
+@if (menuOpen()) {
+  <nav class="menu card" (click)="menuOpen.set(false)">
+    <a routerLink="/about" class="menu-item">{{ i18n.t('menu.about') }}</a>
+    <a routerLink="/privacy" class="menu-item">{{ i18n.t('menu.privacy') }}</a>
+    <a routerLink="/contact" class="menu-item">{{ i18n.t('menu.contact') }}</a>
+    <button class="menu-item" type="button" (click)="toggleLanguage()">{{ i18n.t('menu.language') }}</button>
+    @if (auth.isAuthenticated()) {
+      <button class="menu-item danger" type="button" (click)="signOut()">{{ i18n.t('menu.signOut') }}</button>
+    }
+  </nav>
+}
+
+<main (click)="menuOpen.set(false)">
   <router-outlet />
 </main>

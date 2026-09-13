@@ -1,6 +1,6 @@
 # Phased Backlog — Trusted AI Negotiation Platform
 
-Status: Phase 2 complete (privacy & sharing built and tested); Phase 3 is next. Each phase ends with green builds
+Status: Phase 3 complete (automated AI discussion built and tested); Phase 4 is next. Each phase ends with green builds
 and tests, and a short report (done / files / results / risks / next). Acceptance-test numbers refer to design
 doc §14.
 
@@ -37,17 +37,17 @@ doc §14.
 - [x] Angular: Discussion surface (shared/my-assistant tabs, trust indicators, composer with `Write myself` / `Help me phrase it`), scope picker, exact-preview dialog with derived origin, origin labels, withdrawn/version rendering, live updates over STOMP.
 - **Exit criteria (met):** acceptance tests 1–7, 15, 16 automated and green (`PrivacySharingFlowIT`, `WebSocketAuthIT`).
 
-## Phase 3 — Automated AI discussion
+## Phase 3 — Automated AI discussion ✅
 
 **Goal:** bounded AI-to-AI rounds with separated contexts, structured output, stopping rules, live progress.
 
-- [ ] negotiation: `AiAgentProfile`, boundaries/flexibility intake, `NegotiationRun`/`NegotiationTurn`, single-active-run constraint.
-- [ ] Orchestrator: per-party context builders (allow-list from server state), versioned prompt templates, schema-validated structured turn output, policy validation (`sharedFactsUsed` resolution, no trusted model IDs).
-- [ ] Stopping rules (all of §6.4) + configurable max turns (default 10) + token/cost/time budgets; pause/resume; questions to users + answer endpoint + run resumption.
-- [ ] OpenAI adapter with timeouts/backoff/circuit breaker (behind profile; Fake remains default; key via OPENAI_API_KEY).
-- [ ] Round-result summary (§6.5) + WebSocket progress events (`NEGOTIATION_*`, `QUESTION_CREATED`).
-- [ ] Angular: `Let the assistants look for a solution` flow, live progress, `What happens next` area, question answering inline.
-- **Exit criteria:** acceptance tests 8, 9, 10, 17, 18 green; provider failure leaves domain state clean and retryable.
+- [x] negotiation: `AiAgentProfile` (encrypted private guidance: goals/boundaries/flexibility), `NegotiationRun`/`NegotiationTurn`, single-active-run constraint (unique partial index).
+- [x] Orchestrator: per-party context builders (allow-list from server state — own profile + private notes + only that party's visible shared facts + shared transcript), versioned prompt template (`prompts/negotiation/v1.md`), schema-validated structured turn output, fact-reference validation (citing unshared content fails the run with SAFETY).
+- [x] Stopping rules (§6.4) + configurable max turns (default 10) + token/time budgets enforced pre-call; pause/resume; private questions to own user (encrypted answers) with auto-resume when all are answered.
+- [x] OpenAI adapter (chat completions, JSON response format, retries with backoff, simple circuit breaker; key via OPENAI_API_KEY, model via OPENAI_MODEL); Fake remains the default with deterministic SCENARIO markers for tests.
+- [x] Round-result summary (§6.5: agreed/unresolved/proposals/assumptions/recommended + stop reason) + WebSocket progress events (`NEGOTIATION_STARTED/TURN_COMPLETED/WAITING_FOR_USER`, `QUESTION_CREATED` scoped to the asked user) + question notifications.
+- [x] Angular: `Let the assistants look for a solution` panel with live progress, transcript with per-assistant proposals, inline question answering, plain-language round summary, pause/resume/retry; agent-profile editor in the assistant tab.
+- **Exit criteria (met):** acceptance tests 8, 9, 10, 17, 18 green (`NegotiationFlowIT` — 55 backend tests total); provider failure leaves domain state clean and retryable.
 
 ## Phase 4 — Proposals and approvals
 

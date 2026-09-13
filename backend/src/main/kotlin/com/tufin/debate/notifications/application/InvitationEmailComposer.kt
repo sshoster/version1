@@ -26,8 +26,11 @@ object InvitationEmailComposer {
         acceptUrl: String,
         expiresAt: Instant,
         now: Instant = Instant.now(),
+        recipientName: String? = null,
     ): EmailMessage {
         val inviter = escape(inviterName.ifBlank { "משתתף/ת" })
+        val greetingHe = recipientName?.takeIf { it.isNotBlank() }?.let { "היי ${escape(it)}," } ?: "היי,"
+        val greetingEn = recipientName?.takeIf { it.isNotBlank() }?.let { "Hi ${escape(it)}," } ?: "Hi,"
         val title = escape(roomTitle)
         val (roleHe, roleEn) = ROLE_LABELS[role] ?: (role to role)
         val days = Duration.between(now, expiresAt).toDays().coerceAtLeast(1)
@@ -41,6 +44,7 @@ object InvitationEmailComposer {
                 <p style="margin:0 0 24px;color:#5f6b76;font-size:13px">מקום בטוח לשוחח, להבין ולהגיע להסכמה</p>
 
                 <h2 style="font-size:17px;margin:0 0 12px">הוזמנת לדיון 💬</h2>
+                <p style="margin:0 0 8px">$greetingHe</p>
                 <p style="margin:0 0 8px"><strong>$inviter</strong> הזמין/ה אותך להצטרף לדיון:</p>
                 <p style="margin:0 0 16px;font-size:16px"><strong>„$title"</strong></p>
                 <p style="margin:0 0 16px">התפקיד שלך בדיון: <strong>$roleHe</strong>.</p>
@@ -67,6 +71,7 @@ object InvitationEmailComposer {
                 <hr style="border:none;border-top:1px solid #d9dee3;margin:24px 0" />
 
                 <div dir="ltr" style="color:#5f6b76;font-size:13px">
+                  <p style="margin:0 0 8px">$greetingEn</p>
                   <p style="margin:0 0 8px"><strong>$inviter</strong> invited you to join the discussion
                     <strong>"$title"</strong> as <strong>$roleEn</strong> on Common Ground —
                     a safe place to talk, understand each other, and reach agreement.</p>
@@ -82,6 +87,7 @@ object InvitationEmailComposer {
         val text = """
             מכנה משותף — הוזמנת לדיון
 
+            ${recipientName?.let { "היי $it," } ?: "היי,"}
             $inviterName הזמין/ה אותך להצטרף לדיון: "$roomTitle"
             התפקיד שלך: $roleHe.
 

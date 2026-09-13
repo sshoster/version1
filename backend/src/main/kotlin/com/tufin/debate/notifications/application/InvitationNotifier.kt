@@ -16,6 +16,7 @@ class InvitationNotifier(private val emailSender: EmailSender) {
 
     fun invitationCreated(
         email: String?,
+        recipientName: String?,
         inviterName: String,
         roomTitle: String,
         role: String,
@@ -24,7 +25,7 @@ class InvitationNotifier(private val emailSender: EmailSender) {
     ): Boolean {
         if (email.isNullOrBlank()) return false
         return try {
-            val message = InvitationEmailComposer.compose(inviterName, roomTitle, role, acceptUrl, expiresAt)
+            val message = InvitationEmailComposer.compose(inviterName, roomTitle, role, acceptUrl, expiresAt, recipientName = recipientName)
             emailSender.send(email, message.subject, message.html, message.text)
             true
         } catch (e: Exception) {

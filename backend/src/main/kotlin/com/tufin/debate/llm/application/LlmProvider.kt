@@ -16,6 +16,8 @@ data class LlmRequest(
     val system: String,
     val user: String,
     val maxOutputTokens: Int = 1024,
+    /** When true the adapter enforces a JSON response format (the prompt must mention JSON). */
+    val expectsJson: Boolean = false,
 )
 
 data class LlmResponse(

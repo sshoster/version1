@@ -98,6 +98,37 @@ class RoomInvitationFlowIT : IntegrationTestBase() {
     }
 
     @Test
+    fun `invited name becomes the participant display name and presence is member-only`() {
+        val alice = registerUser("Alice")
+        val bob = registerUser("BobRegisteredName")
+        val roomId = createRoom(alice.accessToken)
+
+        val response = post(
+            "/api/v1/rooms/$roomId/invitations",
+            mapOf("role" to "PARTY", "firstName" to "דנה", "lastName" to "לוי"),
+            alice.accessToken,
+        )
+        assertEquals(201, response.statusCode.value(), response.body)
+        val invitation = json(response)
+        assertEquals("דנה לוי", invitation["invitedName"].asText())
+
+        // The public info shows the invited name; accepting applies it as the room display name.
+        assertEquals("דנה לוי", json(get("/api/v1/invitations/${invitation["token"].asText()}"))["invitedName"].asText())
+        post("/api/v1/invitations/${invitation["token"].asText()}/accept", null, bob.accessToken)
+
+        val participants = json(get("/api/v1/rooms/$roomId/participants", alice.accessToken))
+        val names = participants.map { it["displayName"].asText() }.toSet()
+        assertTrue("דנה לוי" in names, "invited name is used, got $names")
+        assertTrue("BobRegisteredName" !in names)
+
+        // Presence endpoint: members see entries for every participant; outsiders get 404.
+        val presence = json(get("/api/v1/rooms/$roomId/presence", bob.accessToken))
+        assertEquals(2, presence.size())
+        val mallory = registerUser("Mallory")
+        assertEquals(404, get("/api/v1/rooms/$roomId/presence", mallory.accessToken).statusCode.value())
+    }
+
+    @Test
     fun `accepting your own invitation does not consume it`() {
         val alice = registerUser("Alice")
         val bob = registerUser("Bob")

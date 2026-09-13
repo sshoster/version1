@@ -11,6 +11,21 @@ export const routes: Routes = [
     loadComponent: () => import('./features/invite/accept-invite.page').then((m) => m.AcceptInvitePage),
   },
   {
+    path: 'about',
+    loadComponent: () => import('./features/info/info.page').then((m) => m.InfoPage),
+    data: { pageKey: 'about' },
+  },
+  {
+    path: 'privacy',
+    loadComponent: () => import('./features/info/info.page').then((m) => m.InfoPage),
+    data: { pageKey: 'privacy' },
+  },
+  {
+    path: 'contact',
+    loadComponent: () => import('./features/info/info.page').then((m) => m.InfoPage),
+    data: { pageKey: 'contact' },
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),

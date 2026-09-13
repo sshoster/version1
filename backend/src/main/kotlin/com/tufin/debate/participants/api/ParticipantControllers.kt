@@ -27,12 +27,15 @@ import java.time.Instant
 data class CreateInvitationRequest(
     @field:NotNull val role: ParticipantRole = ParticipantRole.PARTY,
     @field:Email val email: String? = null,
+    @field:jakarta.validation.constraints.Size(max = 60) val firstName: String? = null,
+    @field:jakarta.validation.constraints.Size(max = 60) val lastName: String? = null,
 )
 
 data class InvitationSummaryResponse(
     val id: String,
     val role: ParticipantRole,
     val email: String?,
+    val invitedName: String?,
     val status: InvitationStatus,
     val expiresAt: Instant,
     val createdAt: Instant,
@@ -63,7 +66,9 @@ class InvitationController(private val invitationService: InvitationService) {
         @RequestBody @Valid request: CreateInvitationRequest,
         @RequestHeader(name = "Idempotency-Key", required = false) idempotencyKey: String?,
         @AuthenticationPrincipal user: AuthenticatedUser,
-    ): InvitationCreated = invitationService.create(roomId, user, request.role, request.email, idempotencyKey)
+    ): InvitationCreated = invitationService.create(
+        roomId, user, request.role, request.email, request.firstName, request.lastName, idempotencyKey,
+    )
 
     @GetMapping("/api/v1/rooms/{roomId}/invitations")
     fun list(
@@ -71,7 +76,11 @@ class InvitationController(private val invitationService: InvitationService) {
         @AuthenticationPrincipal user: AuthenticatedUser,
     ): List<InvitationSummaryResponse> =
         invitationService.listForRoom(roomId, user).map {
-            InvitationSummaryResponse(it.id, it.role, it.email, it.status, it.expiresAt, it.createdAt)
+            InvitationSummaryResponse(
+                it.id, it.role, it.email,
+                listOfNotNull(it.invitedFirstName, it.invitedLastName).joinToString(" ").takeIf { name -> name.isNotBlank() },
+                it.status, it.expiresAt, it.createdAt,
+            )
         }
 
     @GetMapping("/api/v1/invitations/{token}")
