@@ -305,7 +305,7 @@ class SharingService(
 
     // ---------------- reads ----------------
 
-    fun list(roomId: String, actor: AuthenticatedUser): List<SharedItemView> {
+    fun list(roomId: String, actor: AuthenticatedUser, limit: Int = 200): List<SharedItemView> {
         permissions.requireParticipant(roomId, actor.userId)
         val visible = versions.findByRoomIdAndAudienceUserIdsOrderByCreatedAtAsc(roomId, actor.userId)
         if (visible.isEmpty()) return emptyList()
@@ -333,6 +333,7 @@ class SharingService(
                 )
             }
             .sortedBy { it.createdAt }
+            .takeLast(limit.coerceIn(1, 500))
     }
 
     fun versionsOf(roomId: String, itemId: String, actor: AuthenticatedUser): List<SharedItemVersionView> {

@@ -100,6 +100,12 @@ app:
     max-run-seconds: ${NEGOTIATION_MAX_SECONDS:180}
   outbox:
     poll-interval-ms: 2000
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    auth-per-minute: 20
+    writes-per-minute: 120
+  seed:
+    enabled: ${SEED_DEMO:false}
 
 logging:
   pattern:

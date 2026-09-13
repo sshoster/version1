@@ -62,8 +62,9 @@ class PrivateMessageController(private val privateMessages: PrivateMessageServic
     @GetMapping
     fun list(
         @PathVariable roomId: String,
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue = "200") limit: Int,
         @AuthenticationPrincipal user: AuthenticatedUser,
-    ): List<PrivateMessageView> = privateMessages.list(roomId, user)
+    ): List<PrivateMessageView> = privateMessages.list(roomId, user, limit)
 
     @PostMapping("/{messageId}/ai-draft")
     @ResponseStatus(HttpStatus.CREATED)
@@ -103,8 +104,9 @@ class SharingController(private val sharing: SharingService) {
     @GetMapping("/api/v1/rooms/{roomId}/shared-items")
     fun list(
         @PathVariable roomId: String,
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue = "200") limit: Int,
         @AuthenticationPrincipal user: AuthenticatedUser,
-    ): List<SharedItemView> = sharing.list(roomId, user)
+    ): List<SharedItemView> = sharing.list(roomId, user, limit)
 
     @GetMapping("/api/v1/rooms/{roomId}/shared-items/{itemId}/versions")
     fun versions(

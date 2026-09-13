@@ -17,6 +17,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       # Integration tests use Testcontainers against the runner's Docker daemon.
       - run: ./gradlew :backend:build
+      # Software bill of materials (Syft → CycloneDX JSON, uploaded as an artifact)
+      - uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          artifact-name: sbom.cyclonedx.json
+        continue-on-error: true
 
   frontend:
     runs-on: ubuntu-latest
@@ -31,5 +38,8 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      # Dependency vulnerability scan (informational — does not fail the build)
+      - run: npm audit --audit-level=high
+        continue-on-error: true
       - run: npm test -- --watch=false
       - run: npm run build

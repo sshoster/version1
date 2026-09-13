@@ -14,6 +14,9 @@ app:
     provider: local
     local:
       path: build/test-uploads
+  rate-limit:
+    # Off for functional tests (they hammer the API); RateLimitIT re-enables with tiny budgets.
+    enabled: false
   invitations:
     base-url: http://localhost:4200
   outbox:

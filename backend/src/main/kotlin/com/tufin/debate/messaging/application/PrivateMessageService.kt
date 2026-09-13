@@ -77,9 +77,10 @@ class PrivateMessageService(
         return message.toView(trimmed)
     }
 
-    fun list(roomId: String, actor: AuthenticatedUser): List<PrivateMessageView> {
+    fun list(roomId: String, actor: AuthenticatedUser, limit: Int = 200): List<PrivateMessageView> {
         requirePartyWithAssistant(roomId, actor)
         return messages.findByRoomIdAndAuthorUserIdOrderByCreatedAtAsc(roomId, actor.userId)
+            .takeLast(limit.coerceIn(1, 500))
             .map { it.toView(cipher.decrypt(it.text)) }
     }
 

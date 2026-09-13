@@ -64,6 +64,37 @@ docker compose --profile app up --build
 
 Frontend at http://localhost:8081, backend at http://localhost:8080.
 
+## Demo data
+
+With the backend in the `local` profile and `SEED_DEMO=true` in the environment (or
+`app.seed.enabled=true`), a demo discussion is seeded on startup (idempotent):
+
+| Login | Role |
+| --- | --- |
+| `dana@demo.test` | Owner + party |
+| `avi@demo.test` | Party |
+| `yael@demo.test` | Advisor |
+| `omer@demo.test` | Observer |
+
+Password for all: `demo-password-123`. The room "חלוקת הוצאות הדירה" comes with agent profiles,
+private notes, and two shared statements — ready for an assistants round.
+
+## End-to-end test (Playwright)
+
+`frontend/e2e/mvp-flow.spec.ts` walks the complete §17 flow with two browsers (register → invite →
+private draft → exact-preview share → AI round → proposal → both approvals → all three outcome
+documents). It is deterministic on the fake provider. To run:
+
+```bash
+docker compose up -d mongodb
+```
+
+Then start the backend with `LLM_PROVIDER=fake`, start the frontend (`npm start`), and:
+
+```bash
+cd frontend && npx playwright install chromium && npm run e2e
+```
+
 ## Tests
 
 ```bash
