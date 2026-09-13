@@ -51,17 +51,15 @@ services:
       - key: OPENAI_MODEL
         value: gpt-5.6-luna
 
-      # --- Email invitations (Gmail SMTP) ---
+      # --- Email invitations ---
+      # Render blocks outbound SMTP, so production sends over HTTPS via Brevo
+      # (free tier; verify the MAIL_FROM address in Brevo → Senders & Domains).
       - key: MAIL_ENABLED
         value: "true"
-      - key: SMTP_HOST
-        value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USERNAME
-        value: sshoster@gmail.com
-      - key: SMTP_PASSWORD
-        sync: false # PLACEHOLDER - 16-character Google app password
+      - key: MAIL_PROVIDER
+        value: brevo
+      - key: BREVO_API_KEY
+        sync: false # PLACEHOLDER - xkeysib-... from Brevo → SMTP & API → API Keys
       - key: MAIL_FROM
         value: sshoster@gmail.com
 

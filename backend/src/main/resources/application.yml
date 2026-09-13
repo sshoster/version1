@@ -71,7 +71,11 @@ app:
     expiry-days: 7
   mail:
     enabled: ${MAIL_ENABLED:false}
+    # "smtp" (default; Gmail app password) or "brevo" (HTTPS API — for hosts that block SMTP, e.g. Render)
+    provider: ${MAIL_PROVIDER:smtp}
     from: ${MAIL_FROM:${SMTP_USERNAME:}}
+    brevo:
+      api-key: ${BREVO_API_KEY:}
   encryption:
     # base64 of 32 random bytes; required outside local/test (see .env.example)
     key: ${APP_ENCRYPTION_KEY:}
