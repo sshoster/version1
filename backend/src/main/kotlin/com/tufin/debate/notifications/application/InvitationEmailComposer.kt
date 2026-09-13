@@ -40,7 +40,7 @@ object InvitationEmailComposer {
         val html = """
             <div style="background:#f7f6f3;padding:24px 8px;font-family:'Segoe UI',Arial,sans-serif;color:#1f2933">
               <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d9dee3;border-radius:12px;padding:32px" dir="rtl">
-                <h1 style="font-size:20px;margin:0 0 4px;color:#1f6f5c">מכנה משותף</h1>
+                <h1 style="font-size:20px;margin:0 0 4px;color:#1f6f5c">Bridge AI</h1>
                 <p style="margin:0 0 24px;color:#5f6b76;font-size:13px">מקום בטוח לשוחח, להבין ולהגיע להסכמה</p>
 
                 <h2 style="font-size:17px;margin:0 0 12px">הוזמנת לדיון 💬</h2>
@@ -73,7 +73,7 @@ object InvitationEmailComposer {
                 <div dir="ltr" style="color:#5f6b76;font-size:13px">
                   <p style="margin:0 0 8px">$greetingEn</p>
                   <p style="margin:0 0 8px"><strong>$inviter</strong> invited you to join the discussion
-                    <strong>"$title"</strong> as <strong>$roleEn</strong> on Common Ground —
+                    <strong>"$title"</strong> as <strong>$roleEn</strong> on Bridge AI —
                     a safe place to talk, understand each other, and reach agreement.</p>
                   <p style="margin:0 0 8px">Anything you write to your personal assistant stays private; nothing is
                     shared without your explicit approval, and every step is transparently recorded.</p>
@@ -85,7 +85,7 @@ object InvitationEmailComposer {
         """.trimIndent()
 
         val text = """
-            מכנה משותף — הוזמנת לדיון
+            Bridge AI — הוזמנת לדיון
 
             ${recipientName?.let { "היי $it," } ?: "היי,"}
             $inviterName הזמין/ה אותך להצטרף לדיון: "$roomTitle"
@@ -100,7 +100,7 @@ object InvitationEmailComposer {
 
             ---
 
-            Common Ground — you are invited to a discussion
+            Bridge AI — you are invited to a discussion
 
             $inviterName invited you to join "$roomTitle" as $roleEn.
             Whatever you write to your personal assistant stays private; nothing is shared without

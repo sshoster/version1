@@ -1,4 +1,4 @@
-# Common Ground — Trusted AI Negotiation Platform
+# Bridge AI — Trusted AI Negotiation Platform
 
 A trusted, transparent environment for discussions, negotiations, and conflict resolution between
 two or more people, each supported by a private AI assistant. No private information is disclosed

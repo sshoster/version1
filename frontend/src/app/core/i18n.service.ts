@@ -8,7 +8,7 @@ export type Lang = 'he' | 'en';
  */
 const DICT: Record<Lang, Record<string, string>> = {
   he: {
-    'app.title': 'מכנה משותף',
+    'app.title': 'Bridge AI',
     'app.tagline': 'מקום בטוח לשוחח, להבין ולהגיע להסכמה',
     'app.signOut': 'התנתקות',
 
@@ -214,7 +214,10 @@ const DICT: Record<Lang, Record<string, string>> = {
     'tl.title': 'מה קרה בדיון',
     'tl.ROOM_CREATED': '{0} פתח/ה את הדיון',
     'tl.ROOM_UPDATED': 'פרטי הדיון עודכנו',
-    'tl.ROOM_STATUS_CHANGED': 'מצב הדיון השתנה',
+    'tl.ROOM_STATUS_CHANGED': 'הדיון עבר למצב: {1}',
+    'tl.decision.APPROVED': 'אישר/ה ✓',
+    'tl.decision.REJECTED': 'דחה/תה ✗',
+    'tl.decision.CHANGES_REQUESTED': 'ביקש/ה שינויים ✎',
     'tl.INVITATION_CREATED': '{0} יצר/ה הזמנה',
     'tl.INVITATION_ACCEPTED': 'הזמנה מומשה',
     'tl.INVITATION_REVOKED': 'הזמנה בוטלה',
@@ -275,15 +278,15 @@ const DICT: Record<Lang, Record<string, string>> = {
     'presence.offline': 'לא מחובר/ת',
     'presence.pending': 'ממתין/ה להצטרפות',
 
-    'page.about.title': 'על מכנה משותף',
-    'page.about.body': 'מכנה משותף הוא מקום בטוח לנהל בו שיחות, משא ומתן ופתרון מחלוקות — בין בני זוג, שותפים, שכנים או עסקים. לכל צד יש עוזר AI אישי שעוזר לו לחשוב, לנסח ולהבין, והעוזרים יכולים גם לשוחח ביניהם כדי לחפש פתרון — אבל רק על בסיס מה שהצדדים בחרו לשתף, ושום הסכמה לא נסגרת בלי אישור אנושי מפורש של כל הצדדים.',
+    'page.about.title': 'על Bridge AI',
+    'page.about.body': 'Bridge AI הוא מקום בטוח לנהל בו שיחות, משא ומתן ופתרון מחלוקות — בין בני זוג, שותפים, שכנים או עסקים. לכל צד יש עוזר AI אישי שעוזר לו לחשוב, לנסח ולהבין, והעוזרים יכולים גם לשוחח ביניהם כדי לחפש פתרון — אבל רק על בסיס מה שהצדדים בחרו לשתף, ושום הסכמה לא נסגרת בלי אישור אנושי מפורש של כל הצדדים.',
     'page.privacy.title': 'איך הפרטיות עובדת',
     'page.privacy.body': 'כל מה שנכתב לעוזר האישי נשאר פרטי ומוצפן — אף אחד אחר לא רואה אותו, כולל הצד השני והעוזר שלו.\n\nשום תוכן לא משותף בלי בחירה מפורשת: בוחרים מי יראה, רואים תצוגה מקדימה מדויקת של הנוסח הסופי, ורק אז מאשרים. אם משהו השתנה אחרי התצוגה — נדרש אישור מחדש.\n\nכל הודעה משותפת נושאת תווית מקור ברורה (נכתב על ידי / נוסח בעזרת AI ואושר). הודעה שפורסמה אפשר למשוך, אבל ההיסטוריה נשמרת בשקיפות — שום דבר לא נעלם כאילו לא היה.\n\nה-AI לעולם לא מסכים בשמך, לא חושף מידע פרטי ולא יוצר אישור. הסכמות נסגרות רק באישור עצמאי של כל צד, על אותה גרסה בדיוק.',
     'page.contact.title': 'יצירת קשר',
     'page.contact.body': 'יש לכם שאלה, הצעה או בעיה? נשמח לשמוע.\n\nאימייל: support@example.com\n\n(פרטי הקשר יעודכנו בקרוב)',
   },
   en: {
-    'app.title': 'Common Ground',
+    'app.title': 'Bridge AI',
     'app.tagline': 'A safe place to talk, understand, and reach agreement',
     'app.signOut': 'Sign out',
 
@@ -489,7 +492,10 @@ const DICT: Record<Lang, Record<string, string>> = {
     'tl.title': 'What happened in this discussion',
     'tl.ROOM_CREATED': '{0} opened the discussion',
     'tl.ROOM_UPDATED': 'Discussion details were updated',
-    'tl.ROOM_STATUS_CHANGED': 'The discussion state changed',
+    'tl.ROOM_STATUS_CHANGED': 'The discussion moved to: {1}',
+    'tl.decision.APPROVED': 'approved ✓',
+    'tl.decision.REJECTED': 'rejected ✗',
+    'tl.decision.CHANGES_REQUESTED': 'requested changes ✎',
     'tl.INVITATION_CREATED': '{0} created an invitation',
     'tl.INVITATION_ACCEPTED': 'An invitation was used',
     'tl.INVITATION_REVOKED': 'An invitation was cancelled',
@@ -550,8 +556,8 @@ const DICT: Record<Lang, Record<string, string>> = {
     'presence.offline': 'Offline',
     'presence.pending': 'Waiting to join',
 
-    'page.about.title': 'About Common Ground',
-    'page.about.body': 'Common Ground is a safe place for discussions, negotiation, and conflict resolution — between partners, roommates, neighbors, or businesses. Each side has a personal AI assistant that helps them think, phrase, and understand; the assistants can also talk to each other to look for a solution — but only using what the parties chose to share, and no agreement is concluded without the explicit human approval of every side.',
+    'page.about.title': 'About Bridge AI',
+    'page.about.body': 'Bridge AI is a safe place for discussions, negotiation, and conflict resolution — between partners, roommates, neighbors, or businesses. Each side has a personal AI assistant that helps them think, phrase, and understand; the assistants can also talk to each other to look for a solution — but only using what the parties chose to share, and no agreement is concluded without the explicit human approval of every side.',
     'page.privacy.title': 'How privacy works',
     'page.privacy.body': 'Everything you write to your personal assistant stays private and encrypted — nobody else sees it, including the other party and their assistant.\n\nNothing is shared without an explicit choice: you pick who sees it, review an exact preview of the final wording, and only then confirm. If anything changed after the preview — a fresh confirmation is required.\n\nEvery shared message carries a clear provenance label (written by / AI-assisted and approved). A published message can be withdrawn, but the history remains transparent — nothing disappears as if it never happened.\n\nThe AI never agrees on your behalf, never discloses private information, and never creates an approval. Agreements are concluded only by each side independently approving the exact same version.',
     'page.contact.title': 'Contact',

@@ -1,14 +1,14 @@
 import { Component, DestroyRef, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n.service';
-import { InvitationCreated, ParticipantResponse, ParticipantRole, RoomResponse } from '../../core/models';
+import { ParticipantResponse, RoomResponse } from '../../core/models';
+import { ProposalContent } from '../../core/proposals.service';
 import { RoomEventsService } from '../../core/room-events.service';
 import { RoomsService } from '../../core/rooms.service';
-import { ProposalContent } from '../../core/proposals.service';
 import { AssistantPanelComponent } from './assistant-panel.component';
 import { FilesPanelComponent } from './files-panel.component';
+import { InviteCardComponent } from './invite-card.component';
 import { NegotiationPanelComponent } from './negotiation-panel.component';
 import { ParticipantsPanelComponent } from './participants-panel.component';
 import { ProposalsPanelComponent } from './proposals-panel.component';
@@ -17,15 +17,16 @@ import { SharedPanelComponent } from './shared-panel.component';
 import { TimelineComponent } from './timeline.component';
 
 /**
- * The one-screen Discussion surface (design doc §11.3): shared/assistant switch, plain-language
- * status, panels, and everything secondary behind "More".
+ * The one-screen Discussion surface (design doc §11.3). Desktop layout (RTL): a static right
+ * column (add people + files), the scrolling conversation in the middle, and a static left column
+ * (participants with presence). Everything stacks on mobile.
  */
 @Component({
   selector: 'app-room-page',
   imports: [
-    FormsModule, AssistantPanelComponent, SharedPanelComponent, ShareDialogComponent,
+    AssistantPanelComponent, SharedPanelComponent, ShareDialogComponent,
     NegotiationPanelComponent, ParticipantsPanelComponent, ProposalsPanelComponent, TimelineComponent,
-    FilesPanelComponent,
+    FilesPanelComponent, InviteCardComponent,
   ],
   template: `
     <div class="page room-page">
@@ -33,115 +34,72 @@ import { TimelineComponent } from './timeline.component';
         <p class="muted">{{ i18n.t('common.loading') }}</p>
       } @else if (room(); as r) {
         <div class="room-layout">
-        <div class="stack main-column">
-        <header class="card head">
-          <h1>{{ r.title }}</h1>
-          <p class="status">{{ i18n.t('status.' + r.status) }}</p>
-        </header>
-
-        @if (isParty()) {
-          <app-negotiation-panel
-            [roomId]="roomId()" [roomStatus]="r.status"
-            (createProposal)="createProposal($event)"
-          />
-        }
-        <app-proposals-panel [roomId]="roomId()" [isParty]="isParty()" />
-        @if (isParty()) {
-          <div class="tabs" role="tablist">
-            <button
-              role="tab" class="tab" [class.active]="tab() === 'shared'"
-              [attr.aria-selected]="tab() === 'shared'" (click)="tab.set('shared')"
-            >
-              {{ i18n.t('tab.shared') }}
-            </button>
-            <button
-              role="tab" class="tab" [class.active]="tab() === 'assistant'"
-              [attr.aria-selected]="tab() === 'assistant'" (click)="tab.set('assistant')"
-            >
-              {{ i18n.t('tab.assistant') }}
-            </button>
-          </div>
-        }
-
-        <div class="card">
-          @if (tab() === 'assistant' && isParty()) {
-            <app-assistant-panel [roomId]="roomId()" [roomStatus]="r.status" (share)="openShare($event)" />
-          } @else {
-            <app-shared-panel
-              [roomId]="roomId()"
-              [roomStatus]="r.status"
-              (share)="openShare($event)"
-              (helpPhrase)="helpMePhrase($event)"
-            />
-          }
-        </div>
-
-        <app-files-panel
-          [roomId]="roomId()"
-          [canUpload]="isParty() || isAdvisor()"
-          [participants]="participants()"
-        />
-
-        <details class="card">
-          <summary>{{ i18n.t('more.title') }}</summary>
-          <div class="stack" style="margin-block-start: var(--space-3)">
-            @if (r.objective) {
-              <p class="muted"><strong>{{ i18n.t('room.objective') }}:</strong> {{ r.objective }}</p>
-            }
-
+          <!-- Static start-side column (right in RTL): add people + files. -->
+          <aside class="side-column start-col">
             @if (isOwner()) {
-              <h2>{{ i18n.t('room.invite') }}</h2>
-              @if (!invitation()) {
-                <div class="field">
-                  <label for="role">{{ i18n.t('room.invite.role') }}</label>
-                  <select id="role" name="role" [(ngModel)]="inviteRole">
-                    <option value="PARTY">{{ i18n.t('room.role.PARTY') }}</option>
-                    <option value="ADVISOR">{{ i18n.t('room.role.ADVISOR') }}</option>
-                    <option value="OBSERVER">{{ i18n.t('room.role.OBSERVER') }}</option>
-                  </select>
-                </div>
-                <div class="name-row">
-                  <div class="field">
-                    <label for="inviteFirstName">{{ i18n.t('invite.firstName') }}</label>
-                    <input id="inviteFirstName" name="inviteFirstName" type="text" [(ngModel)]="inviteFirstName" />
-                  </div>
-                  <div class="field">
-                    <label for="inviteLastName">{{ i18n.t('invite.lastName') }}</label>
-                    <input id="inviteLastName" name="inviteLastName" type="text" [(ngModel)]="inviteLastName" />
-                  </div>
-                </div>
-                <p class="hint">{{ i18n.t('invite.nameHint') }}</p>
-                <div class="field">
-                  <label for="inviteEmail">{{ i18n.t('room.invite.email') }}</label>
-                  <input id="inviteEmail" name="inviteEmail" type="email" dir="ltr" [(ngModel)]="inviteEmail" />
-                  <span class="hint">{{ i18n.t('room.invite.emailHint') }}</span>
-                </div>
-                <p class="muted">{{ i18n.t('room.invite.explain') }}</p>
-                <button class="btn btn-primary" type="button" [disabled]="busy() || !inviteFirstName.trim()" (click)="invite()">
-                  {{ i18n.t('room.invite.create') }}
-                </button>
-              } @else {
-                @if (invitation()!.email && invitation()!.emailSent) {
-                  <p><span class="badge">{{ i18n.t('room.invite.emailSentTo', invitation()!.email!) }}</span></p>
-                } @else if (invitation()!.email && !invitation()!.emailSent) {
-                  <div class="error-box">{{ i18n.t('room.invite.emailNotSent') }}</div>
-                }
-                <p class="muted">{{ i18n.t('room.invite.shareHint') }}</p>
-                <div class="invite-link" dir="ltr">{{ invitation()!.acceptUrl }}</div>
-                <button class="btn btn-secondary" type="button" (click)="copyLink()">
-                  {{ copied() ? i18n.t('room.invite.copied') : i18n.t('room.invite.copy') }}
-                </button>
-              }
+              <app-invite-card [roomId]="roomId()" (invited)="onInvited()" />
             }
+            <app-files-panel
+              [roomId]="roomId()"
+              [canUpload]="isParty() || isAdvisor()"
+              [participants]="participants()"
+            />
+          </aside>
+
+          <div class="stack main-column">
+            <header class="card head">
+              <h1>{{ r.title }}</h1>
+              <p class="status">{{ i18n.t('status.' + r.status) }}</p>
+              @if (r.objective) {
+                <p class="muted objective">{{ r.objective }}</p>
+              }
+            </header>
+
+            @if (isParty()) {
+              <app-negotiation-panel
+                [roomId]="roomId()" [roomStatus]="r.status"
+                (createProposal)="createProposal($event)"
+              />
+            }
+            <app-proposals-panel [roomId]="roomId()" [isParty]="isParty()" />
+
+            @if (isParty()) {
+              <div class="tabs" role="tablist">
+                <button
+                  role="tab" class="tab" [class.active]="tab() === 'shared'"
+                  [attr.aria-selected]="tab() === 'shared'" (click)="tab.set('shared')"
+                >
+                  {{ i18n.t('tab.shared') }}
+                </button>
+                <button
+                  role="tab" class="tab" [class.active]="tab() === 'assistant'"
+                  [attr.aria-selected]="tab() === 'assistant'" (click)="tab.set('assistant')"
+                >
+                  {{ i18n.t('tab.assistant') }}
+                </button>
+              </div>
+            }
+
+            <div class="card">
+              @if (tab() === 'assistant' && isParty()) {
+                <app-assistant-panel [roomId]="roomId()" [roomStatus]="r.status" (share)="openShare($event)" />
+              } @else {
+                <app-shared-panel
+                  [roomId]="roomId()"
+                  [roomStatus]="r.status"
+                  (share)="openShare($event)"
+                  (helpPhrase)="helpMePhrase($event)"
+                />
+              }
+            </div>
+
+            <app-timeline [roomId]="roomId()" />
           </div>
-        </details>
 
-        <app-timeline [roomId]="roomId()" />
-        </div>
-
-        <aside class="side-column">
-          <app-participants-panel [roomId]="roomId()" [isOwner]="isOwner()" />
-        </aside>
+          <!-- Static end-side column (left in RTL): who is here, live. -->
+          <aside class="side-column end-col">
+            <app-participants-panel [roomId]="roomId()" [isOwner]="isOwner()" />
+          </aside>
         </div>
       }
     </div>
@@ -158,31 +116,28 @@ import { TimelineComponent } from './timeline.component';
     }
   `,
   styles: `
-    .room-page { max-width: 960px; }
-    .room-layout { display: flex; flex-direction: column-reverse; gap: var(--space-3); }
-    .main-column { flex: 1; min-width: 0; }
-    .side-column { flex-shrink: 0; }
-    @media (min-width: 900px) {
+    .room-page { max-width: 1240px; }
+    .room-layout { display: flex; flex-direction: column; gap: var(--space-3); }
+    .main-column { flex: 1; min-width: 0; order: 1; }
+    .start-col { order: 2; }
+    .end-col { order: 3; }
+    .side-column { display: flex; flex-direction: column; gap: var(--space-3); }
+    @media (min-width: 1000px) {
       .room-layout { flex-direction: row; align-items: flex-start; }
-      .side-column { width: 250px; position: sticky; top: var(--space-3); }
+      .main-column { order: 0; }
+      .start-col { order: -1; width: 290px; flex-shrink: 0; }
+      .end-col { order: 1; width: 250px; flex-shrink: 0; }
+      .side-column { position: sticky; top: var(--space-3); max-height: calc(100vh - 24px); overflow-y: auto; }
     }
-    .name-row { display: flex; gap: var(--space-2); }
-    .name-row .field { flex: 1; }
     .head h1 { margin-block-end: var(--space-1); }
     .status { margin: 0; color: var(--color-text-muted); }
+    .objective { margin: var(--space-1) 0 0; font-size: 0.9rem; }
     .tabs { display: flex; gap: var(--space-2); }
     .tab {
       flex: 1; min-height: 48px; border: 1px solid var(--color-border); border-radius: var(--radius);
       background: var(--color-surface); font: inherit; cursor: pointer;
     }
     .tab.active { background: var(--color-primary); color: var(--color-primary-contrast); border-color: var(--color-primary); }
-    .invite-link {
-      background: var(--color-bg); border: 1px dashed var(--color-border); border-radius: var(--radius);
-      padding: var(--space-2) var(--space-3); overflow-wrap: anywhere; font-size: 0.85rem;
-      margin-block-end: var(--space-2);
-    }
-    .participants { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
-    summary { cursor: pointer; font-weight: 600; min-height: 32px; }
   `,
 })
 export class RoomPage {
@@ -197,16 +152,8 @@ export class RoomPage {
   protected readonly loading = signal(true);
   protected readonly room = signal<RoomResponse | null>(null);
   protected readonly participants = signal<ParticipantResponse[]>([]);
-  protected readonly invitation = signal<InvitationCreated | null>(null);
-  protected readonly busy = signal(false);
-  protected readonly copied = signal(false);
   protected readonly tab = signal<'shared' | 'assistant'>('shared');
   protected readonly shareIntent = signal<ShareIntent | null>(null);
-
-  protected inviteRole: ParticipantRole = 'PARTY';
-  protected inviteEmail = '';
-  protected inviteFirstName = '';
-  protected inviteLastName = '';
 
   private readonly sharedPanel = viewChild(SharedPanelComponent);
   private readonly assistantPanel = viewChild(AssistantPanelComponent);
@@ -214,6 +161,7 @@ export class RoomPage {
   private readonly participantsPanel = viewChild(ParticipantsPanelComponent);
   private readonly proposalsPanel = viewChild(ProposalsPanelComponent);
   private readonly filesPanel = viewChild(FilesPanelComponent);
+  private readonly timeline = viewChild(TimelineComponent);
 
   protected readonly isOwner = computed(() => this.room()?.myRoles.includes('OWNER') ?? false);
   protected readonly isAdvisor = computed(() => this.room()?.myRoles.includes('ADVISOR') ?? false);
@@ -267,6 +215,7 @@ export class RoomPage {
               this.filesPanel()?.refresh();
               break;
           }
+          this.timeline()?.refreshIfOpen();
         });
     });
   }
@@ -288,6 +237,11 @@ export class RoomPage {
     });
   }
 
+  protected onInvited(): void {
+    this.reloadRoom(this.roomId());
+    this.participantsPanel()?.refresh();
+  }
+
   protected openShare(intent: ShareIntent): void {
     this.shareIntent.set(intent);
   }
@@ -305,39 +259,6 @@ export class RoomPage {
   /** "Help me phrase it": save privately, get a suggestion, land in the assistant tab. */
   protected helpMePhrase(text: string): void {
     this.tab.set('assistant');
-    // The assistant panel mounts on tab switch; queue the request for after render.
     setTimeout(() => this.assistantPanel()?.writeAndSuggest(text));
-  }
-
-  protected invite(): void {
-    if (this.busy()) return;
-    this.busy.set(true);
-    this.rooms
-      .invite(
-        this.roomId(), this.inviteRole, this.inviteEmail.trim() || null,
-        this.inviteFirstName.trim() || null, this.inviteLastName.trim() || null,
-      )
-      .subscribe({
-        next: (created) => {
-          this.invitation.set(created);
-          this.busy.set(false);
-          this.reloadRoom(this.roomId());
-          this.participantsPanel()?.refresh();
-        },
-        error: () => this.busy.set(false),
-      });
-  }
-
-  protected copyLink(): void {
-    const url = this.invitation()?.acceptUrl;
-    if (!url) return;
-    void navigator.clipboard.writeText(url).then(() => {
-      this.copied.set(true);
-      setTimeout(() => this.copied.set(false), 2500);
-    });
-  }
-
-  protected roleNames(participant: ParticipantResponse): string {
-    return participant.roles.map((role) => this.i18n.t(`room.role.${role}`)).join(', ');
   }
 }
