@@ -23,9 +23,9 @@ services:
       - key: MONGODB_URI
         sync: false # PLACEHOLDER - mongodb+srv://sshoster_db_user:<PASSWORD>@cluster0.gl1a4bh.mongodb.net/debate?retryWrites=true&w=majority
       - key: APP_BASE_URL
-        value: https://bridge-ai-scfa.onrender.com # update if the service gets a different URL/domain
+        value: https://bridge-ai-fuev.onrender.com # update if the service gets a different URL/domain
       - key: CORS_ALLOWED_ORIGINS
-        value: https://bridge-ai-scfa.onrender.com # keep in sync with APP_BASE_URL
+        value: https://bridge-ai-fuev.onrender.com # keep in sync with APP_BASE_URL
 
       # --- Files: Cloudflare R2 (S3-compatible) ---
       - key: STORAGE_PROVIDER
