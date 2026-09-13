@@ -29,6 +29,7 @@ class RoomService(
     private val auditService: AuditService,
     private val outboxService: OutboxService,
     private val mongoTemplate: MongoTemplate,
+    private val lifecycleService: RoomLifecycleService,
 ) {
     @Transactional
     fun create(actor: AuthenticatedUser, title: String, objective: String?): RoomView {
@@ -84,6 +85,20 @@ class RoomService(
     fun get(roomId: String, actor: AuthenticatedUser): RoomView {
         val participant = permissions.requireParticipant(roomId, actor.userId)
         val room = rooms.findById(roomId).orElseThrow { NotFoundException("This discussion was not found") }
+        return RoomView(room, participant.roles)
+    }
+
+    /** Party-initiated lifecycle moves (pause/resume/close); the transition table does the rest. */
+    fun lifecycle(roomId: String, actor: AuthenticatedUser, target: RoomStatus): RoomView {
+        val participant = permissions.requireRole(roomId, actor.userId, ParticipantRole.PARTY, ParticipantRole.OWNER)
+        val room = lifecycleService.transition(roomId, target, com.tufin.debate.audit.domain.ActorType.USER, actor.userId)
+        return RoomView(room, participant.roles)
+    }
+
+    /** Reopening a CLOSED discussion is restricted to the owner. */
+    fun reopen(roomId: String, actor: AuthenticatedUser): RoomView {
+        val participant = permissions.requireRole(roomId, actor.userId, ParticipantRole.OWNER)
+        val room = lifecycleService.transition(roomId, RoomStatus.ACTIVE, com.tufin.debate.audit.domain.ActorType.USER, actor.userId, "reopened")
         return RoomView(room, participant.roles)
     }
 

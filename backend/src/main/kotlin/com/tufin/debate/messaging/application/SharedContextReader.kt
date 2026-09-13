@@ -23,6 +23,18 @@ class SharedContextReader(
     private val versions: SharedItemVersionRepository,
     private val items: SharedItemRepository,
 ) {
+    /** Facts every one of the given users can see — the safe basis for a shared artifact. */
+    fun factsVisibleToAll(roomId: String, userIds: Collection<String>): List<SharedFact> {
+        val first = userIds.firstOrNull() ?: return emptyList()
+        val rest = userIds.drop(1).toSet()
+        return visibleFacts(roomId, first).filter { fact ->
+            rest.all { userId ->
+                versions.findByRoomIdAndAudienceUserIdsOrderByCreatedAtAsc(roomId, userId)
+                    .any { it.id == fact.versionId }
+            }
+        }
+    }
+
     fun visibleFacts(roomId: String, userId: String): List<SharedFact> {
         val visible = versions.findByRoomIdAndAudienceUserIdsOrderByCreatedAtAsc(roomId, userId)
         if (visible.isEmpty()) return emptyList()

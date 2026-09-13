@@ -1,6 +1,8 @@
 import { Component, DestroyRef, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { OutcomesService } from '../../core/outcomes.service';
 import { I18nService } from '../../core/i18n.service';
 import { ParticipantResponse, RoomResponse } from '../../core/models';
 import { ProposalContent } from '../../core/proposals.service';
@@ -24,6 +26,7 @@ import { TimelineComponent } from './timeline.component';
 @Component({
   selector: 'app-room-page',
   imports: [
+    RouterLink,
     AssistantPanelComponent, SharedPanelComponent, ShareDialogComponent,
     NegotiationPanelComponent, ParticipantsPanelComponent, ProposalsPanelComponent, TimelineComponent,
     FilesPanelComponent, InviteCardComponent,
@@ -48,7 +51,15 @@ import { TimelineComponent } from './timeline.component';
 
           <div class="stack main-column">
             <header class="card head">
-              <h1>{{ r.title }}</h1>
+              <div class="head-row">
+                <h1>{{ r.title }}</h1>
+                @if (isParty() || isAdvisor()) {
+                  <a class="btn" [class.btn-primary]="r.status === 'AGREED'" [class.btn-secondary]="r.status !== 'AGREED'"
+                     [routerLink]="['/rooms', roomId(), 'result']">
+                    {{ i18n.t('outcomes.link') }}
+                  </a>
+                }
+              </div>
               <p class="status">{{ i18n.t('status.' + r.status) }}</p>
               @if (r.objective) {
                 <p class="muted objective">{{ r.objective }}</p>
@@ -93,6 +104,21 @@ import { TimelineComponent } from './timeline.component';
               }
             </div>
 
+            @if (isParty()) {
+              <div class="lifecycle no-print">
+                @if (r.status === 'PAUSED') {
+                  <button class="btn btn-secondary" type="button" (click)="lifecycle('resume')">{{ i18n.t('room.lifecycle.resume') }}</button>
+                } @else if (r.status === 'CLOSED') {
+                  @if (isOwner()) {
+                    <button class="btn btn-secondary" type="button" (click)="lifecycle('reopen')">{{ i18n.t('room.lifecycle.reopen') }}</button>
+                  }
+                } @else {
+                  <button class="btn btn-quiet" type="button" (click)="lifecycle('pause')">{{ i18n.t('room.lifecycle.pause') }}</button>
+                  <button class="btn btn-quiet" type="button" (click)="lifecycle('close')">{{ i18n.t('room.lifecycle.close') }}</button>
+                }
+              </div>
+            }
+
             <app-timeline [roomId]="roomId()" />
           </div>
 
@@ -130,6 +156,9 @@ import { TimelineComponent } from './timeline.component';
       .side-column { position: sticky; top: var(--space-3); max-height: calc(100vh - 24px); overflow-y: auto; }
     }
     .head h1 { margin-block-end: var(--space-1); }
+    .head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+    .head-row h1 { margin: 0; }
+    .lifecycle { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
     .status { margin: 0; color: var(--color-text-muted); }
     .objective { margin: var(--space-1) 0 0; font-size: 0.9rem; }
     .tabs { display: flex; gap: var(--space-2); }
@@ -144,6 +173,7 @@ export class RoomPage {
   protected readonly i18n = inject(I18nService);
   protected readonly auth = inject(AuthService);
   private readonly rooms = inject(RoomsService);
+  private readonly outcomesService = inject(OutcomesService);
   private readonly roomEvents = inject(RoomEventsService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -235,6 +265,16 @@ export class RoomPage {
       next: (participants) => this.participants.set(participants),
       error: () => undefined,
     });
+  }
+
+  protected lifecycle(action: 'pause' | 'resume' | 'close' | 'reopen'): void {
+    const id = this.roomId();
+    const call =
+      action === 'pause' ? this.outcomesService.pauseRoom(id)
+        : action === 'resume' ? this.outcomesService.resumeRoom(id)
+          : action === 'close' ? this.outcomesService.closeRoom(id)
+            : this.outcomesService.reopenRoom(id);
+    call.subscribe({ next: () => this.reloadRoom(id), error: () => this.reloadRoom(id) });
   }
 
   protected onInvited(): void {

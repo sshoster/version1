@@ -79,4 +79,23 @@ class RoomController(private val roomService: RoomService) {
         @RequestBody @Valid request: UpdateRoomRequest,
         @AuthenticationPrincipal user: AuthenticatedUser,
     ): RoomResponse = roomService.update(roomId, user, request.title, request.objective).toResponse()
+
+    // ---- lifecycle (test 20: pause, close, reopen, review later) ----
+
+    @PostMapping("/{roomId}/pause")
+    fun pause(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser): RoomResponse =
+        roomService.lifecycle(roomId, user, RoomStatus.PAUSED).toResponse()
+
+    @PostMapping("/{roomId}/resume")
+    fun resume(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser): RoomResponse =
+        roomService.lifecycle(roomId, user, RoomStatus.ACTIVE).toResponse()
+
+    @PostMapping("/{roomId}/close")
+    fun close(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser): RoomResponse =
+        roomService.lifecycle(roomId, user, RoomStatus.CLOSED).toResponse()
+
+    /** Reopening a closed discussion is an owner action (design doc: "reopened when authorized"). */
+    @PostMapping("/{roomId}/reopen")
+    fun reopen(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser): RoomResponse =
+        roomService.reopen(roomId, user).toResponse()
 }

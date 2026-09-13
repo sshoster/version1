@@ -261,6 +261,39 @@ export interface TimelineEntry {
   occurredAt: string;
 }
 
+export type OutcomeType = 'DISCUSSION_SUMMARY' | 'APPROVED_UNDERSTANDINGS' | 'AGREEMENT_DRAFT';
+
+export interface ApprovalRecord {
+  userId: string;
+  displayName: string;
+  approvedAt: string;
+  proposalVersion: number;
+  contentHash: string;
+}
+
+export interface UnderstandingBlock {
+  proposalId: string;
+  title: string;
+  terms: string[];
+  assumptions: string[];
+  proposalVersion: number;
+  contentHash: string;
+  approvals: ApprovalRecord[];
+}
+
+export interface OutcomeView {
+  id: string;
+  type: OutcomeType;
+  version: number;
+  aiGenerated: boolean;
+  draftOnly: boolean;
+  notLegalAdvice: boolean;
+  text: string | null;
+  understandings: UnderstandingBlock[] | null;
+  llmProvider: string | null;
+  createdAt: string;
+}
+
 export interface AgentProfile {
   goals: string;
   boundaries: string;

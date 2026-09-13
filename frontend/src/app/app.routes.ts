@@ -40,5 +40,10 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./features/room/room.page').then((m) => m.RoomPage),
   },
+  {
+    path: 'rooms/:roomId/result',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/room/result.page').then((m) => m.ResultPage),
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -1,6 +1,6 @@
 # Phased Backlog — Trusted AI Negotiation Platform
 
-Status: Phase 4 complete (proposals & approvals built and tested); Phase 5 is next. Each phase ends with green builds
+Status: Phase 5 complete (outcomes built and tested); Phase 6 (hardening) is next. Each phase ends with green builds
 and tests, and a short report (done / files / results / risks / next). Acceptance-test numbers refer to design
 doc §14.
 
@@ -59,16 +59,16 @@ doc §14.
 - [x] Angular: proposals panel with version history, "create formal proposal from the assistants' recommendation", `Your approval is needed` flow with fair-weight Approve/Reject/Request changes (+ optional comment), revision editor with explicit consequence note, timeline under `What happened in this discussion`.
 - **Exit criteria (met):** acceptance tests 11, 12, 13, 14, 21, 22 green (`ApprovalFlowIT` — 60 backend tests total).
 
-## Phase 5 — Outcomes
+## Phase 5 — Outcomes ✅
 
 **Goal:** the three labeled outcome artifacts, exportable.
 
-- [ ] `DISCUSSION_SUMMARY` (AI-generated, labeled, never presented as approved).
-- [ ] `APPROVED_UNDERSTANDINGS` (only all-party-approved terms; per-party approval records; re-versioning invalidates approvals).
-- [ ] `AGREEMENT_DRAFT` (from approved understandings + shared info only; draft/no-legal-advice labels; shareable with advisor).
-- [ ] Print/export-friendly output (PDF or print CSS).
-- [ ] Angular Result surface: all three artifacts in one place.
-- **Exit criteria:** acceptance tests 19, 20 green; MVP end-to-end flow (§17) demoable with Fake provider.
+- [x] `DISCUSSION_SUMMARY` — AI-generated from material EVERY party can see; labeled aiGenerated, never presented as approved.
+- [x] `APPROVED_UNDERSTANDINGS` — deterministic (no AI) from all-party-approved proposal versions, with per-party approval records (name, timestamp, version, content hash).
+- [x] `AGREEMENT_DRAFT` — AI-generated from approved understandings + all-parties-shared facts only; draftOnly + notLegalAdvice labels; readable by advisors.
+- [x] Print/export: standalone print window per artifact (title, label, meta, content).
+- [x] Angular Result surface (`/rooms/:id/result`): all three artifacts with generate/regenerate, labels as badges, version stamps; room lifecycle buttons (pause/resume/close/owner-reopen) + endpoints.
+- **Exit criteria (met):** acceptance tests 19, 20 green (`OutcomesFlowIT` — 65 backend tests total); MVP end-to-end flow (§17) demoable with Fake provider.
 
 ## Phase 6 — Hardening
 

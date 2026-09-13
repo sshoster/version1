@@ -24,6 +24,8 @@ class FakeLlmProvider : LlmProvider {
         val text = when {
             request.templateId.startsWith("draft/") -> draft(request.user)
             request.templateId.startsWith("negotiation/") -> negotiationTurn(request.user)
+            request.templateId.startsWith("summary/") -> summary(request.user)
+            request.templateId.startsWith("agreement/") -> agreementDraft(request.user)
             else -> "תשובה לדוגמה עבור: ${request.user.take(120)}"
         }
         return LlmResponse(
@@ -121,6 +123,50 @@ class FakeLlmProvider : LlmProvider {
             "stopReason" to "NONE",
         )
         return json.writeValueAsString(base + output)
+    }
+
+    /** Deterministic discussion summary built from the provided material. */
+    private fun summary(material: String): String {
+        val statements = Regex("SHARED_STATEMENTS[^\\n]*\\n((?:  - [^\\n]+\\n?)*)").find(material)
+            ?.groupValues?.get(1)?.lines()?.filter { it.isNotBlank() } ?: emptyList()
+        val proposals = Regex("PROPOSALS:\\n((?:  - [^\\n]+\\n?)*)").find(material)
+            ?.groupValues?.get(1)?.lines()?.filter { it.isNotBlank() } ?: emptyList()
+        return buildString {
+            appendLine("## סיכום הדיון")
+            appendLine()
+            appendLine("### הנושאים והעמדות")
+            statements.forEach { appendLine(it.trim().removePrefix("- ")) }
+            appendLine()
+            appendLine("### הצעות שנדונו")
+            if (proposals.isEmpty()) appendLine("(עוד אין הצעות)")
+            proposals.forEach { appendLine(it.trim().removePrefix("- ")) }
+            appendLine()
+            appendLine("### נקודות פתוחות")
+            appendLine("הצדדים ממשיכים לדייק את הפרטים.")
+        }.trim()
+    }
+
+    /** Deterministic agreement draft built from the approved understandings. */
+    private fun agreementDraft(material: String): String {
+        val title = Regex("DISCUSSION_TITLE: ([^\\n]+)").find(material)?.groupValues?.get(1) ?: "ההסכם"
+        val parties = Regex("PARTIES: ([^\\n]+)").find(material)?.groupValues?.get(1) ?: ""
+        val terms = Regex("- term: ([^\\n]+)").findAll(material).map { it.groupValues[1] }.toList()
+        val assumptions = Regex("- assumption: ([^\\n]+)").findAll(material).map { it.groupValues[1] }.toList()
+        return buildString {
+            appendLine("# טיוטת הסכם — $title")
+            appendLine()
+            appendLine("בין: $parties")
+            appendLine()
+            appendLine("## סעיפים")
+            terms.forEachIndexed { index, term -> appendLine("${index + 1}. $term") }
+            if (assumptions.isNotEmpty()) {
+                appendLine()
+                appendLine("## הנחות")
+                assumptions.forEach { appendLine("- $it") }
+            }
+            appendLine()
+            appendLine("מסמך זה משקף את ההבנות שאושרו על ידי הצדדים בפלטפורמה.")
+        }.trim()
     }
 
     /** Calm, structured rewording of the user's text — deterministic on purpose. */
