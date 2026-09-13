@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: debate-backend
+  config:
+    # Convenience: pick up the repo-root .env (KEY=value) so IDE runs and bootRun see the same
+    # variables docker-compose does. Both paths are optional — nothing fails when .env is absent.
+    import:
+      - "optional:file:.env[.properties]"
+      - "optional:file:../.env[.properties]"
+  profiles:
+    # Developer convenience: any launch without an explicit profile (IDE run, bootRun) is local
+    # dev mode, where a missing JWT_SECRET falls back to a generated per-process secret.
+    # Deployments MUST set SPRING_PROFILES_ACTIVE (docker-compose sets "prod"), which restores
+    # the fail-closed behavior: startup fails unless JWT_SECRET is provided.
+    default: local
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/debate?replicaSet=rs0&directConnection=true}
+      auto-index-creation: false
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      "[mail.smtp.auth]": true
+      "[mail.smtp.starttls.enable]": true
+      "[mail.smtp.connectiontimeout]": 10000
+      "[mail.smtp.timeout]": 10000
+      "[mail.smtp.writetimeout]": 10000
+
+mongock:
+  migration-scan-package: com.tufin.debate.infra.migrations
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    mail:
+      # SMTP reachability must not fail readiness — email is best-effort by design.
+      enabled: false
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+app:
+  security:
+    jwt-secret: ${JWT_SECRET:}
+    access-token-ttl: ${ACCESS_TOKEN_TTL:PT15M}
+    refresh-token-ttl: ${REFRESH_TOKEN_TTL:P14D}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  invitations:
+    base-url: ${APP_BASE_URL:http://localhost:4200}
+    expiry-days: 7
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:${SMTP_USERNAME:}}
+  encryption:
+    # base64 of 32 random bytes; required outside local/test (see .env.example)
+    key: ${APP_ENCRYPTION_KEY:}
+  llm:
+    provider: ${LLM_PROVIDER:fake}
+  outbox:
+    poll-interval-ms: 2000
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] [%X{correlationId:-}] %logger{36} - %msg%n"

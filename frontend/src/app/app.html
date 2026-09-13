@@ -1,0 +1,13 @@
+<header class="app-header">
+  <a routerLink="/" class="brand">{{ i18n.t('app.title') }}</a>
+  @if (auth.isAuthenticated()) {
+    <div class="user-area">
+      <span class="muted">{{ auth.user()?.displayName }}</span>
+      <button class="btn btn-quiet" type="button" (click)="signOut()">{{ i18n.t('app.signOut') }}</button>
+    </div>
+  }
+</header>
+
+<main>
+  <router-outlet />
+</main>

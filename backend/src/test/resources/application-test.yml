@@ -1,0 +1,16 @@
+# Test profile: fixed (non-production) JWT secret so tokens are verifiable across the test JVM.
+app:
+  security:
+    jwt-secret: "integration-test-secret-0123456789-0123456789"
+  mail:
+    # Tests must never send real email, even when a developer .env enables it.
+    enabled: false
+  encryption:
+    # Fixed test key so the AES-GCM path is exercised in integration tests.
+    key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+  llm:
+    provider: fake
+  invitations:
+    base-url: http://localhost:4200
+  outbox:
+    poll-interval-ms: 500

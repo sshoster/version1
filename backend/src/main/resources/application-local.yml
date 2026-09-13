@@ -1,0 +1,6 @@
+# Local development profile: run with SPRING_PROFILES_ACTIVE=local.
+# A missing JWT_SECRET is tolerated here only — a random per-process secret is generated
+# (see JwtSecretProvider); everything else still comes from the environment.
+logging:
+  level:
+    com.tufin.debate: DEBUG
