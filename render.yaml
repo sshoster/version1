@@ -1,6 +1,9 @@
 # Render blueprint (https://render.com/docs/blueprint-spec).
-# Deploy: Render dashboard → New → Blueprint → pick this repo. Fill in the sync:false values
-# (docs/deployment.md walks through every one).
+# Deploy: Render dashboard → New → Blueprint → pick this repo.
+#
+# SECRETS ARE NEVER COMMITTED: every "sync: false" entry is a placeholder — Render prompts for
+# the value in the dashboard on first deploy (tip: the Environment tab has "Add from .env" for
+# bulk paste from your local .env). Everything else is a safe, non-credential value.
 services:
   - type: web
     name: bridge-ai
@@ -10,46 +13,68 @@ services:
     plan: free # switch to "starter" for an always-on instance (free sleeps after idle)
     healthCheckPath: /actuator/health
     envVars:
+      # --- Core ---
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: JWT_SECRET
-        generateValue: true
-      # base64 of 32 random bytes — generate with: openssl rand -base64 32
+        generateValue: true # Render generates a strong random value
       - key: APP_ENCRYPTION_KEY
-        sync: false
-      # MongoDB Atlas SRV connection string, e.g.
-      # mongodb+srv://USER:PASS@cluster.xxxxx.mongodb.net/debate?retryWrites=true&w=majority
+        sync: false # PLACEHOLDER — base64 of 32 random bytes: openssl rand -base64 32
       - key: MONGODB_URI
-        sync: false
-      # Public URL of this service (used in invitation links/emails), e.g. https://bridge-ai.onrender.com
+        sync: false # PLACEHOLDER — mongodb+srv://sshoster_db_user:<PASSWORD>@cluster0.gl1a4bh.mongodb.net/debate?retryWrites=true&w=majority
       - key: APP_BASE_URL
-        sync: false
+        value: https://bridge-ai.onrender.com # update if the service gets a different URL/domain
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://bridge-ai.onrender.com # keep in sync with APP_BASE_URL
+
       # --- Files: Cloudflare R2 (S3-compatible) ---
       - key: STORAGE_PROVIDER
         value: s3
       - key: S3_BUCKET
-        sync: false
+        value: bridge-ai-files
       - key: S3_ENDPOINT
-        sync: false # https://<accountid>.r2.cloudflarestorage.com
+        value: https://8f41bee4ee59b3f432594ee5dd44dec8.r2.cloudflarestorage.com
       - key: S3_REGION
         value: auto
-      - key: S3_ACCESS_KEY
-        sync: false
-      - key: S3_SECRET_KEY
-        sync: false
       - key: S3_PATH_STYLE
         value: "true"
-      # --- AI (optional: leave provider as fake to run without a key) ---
+      - key: S3_ACCESS_KEY
+        sync: false # PLACEHOLDER — R2 API token Access Key ID
+      - key: S3_SECRET_KEY
+        sync: false # PLACEHOLDER — R2 API token Secret Access Key
+
+      # --- AI ---
       - key: LLM_PROVIDER
-        value: openai
+        value: openai # set to "fake" to run without an API key / AI costs
       - key: OPENAI_API_KEY
-        sync: false
-      # --- Email invitations (optional) ---
+        sync: false # PLACEHOLDER — sk-...
+      - key: OPENAI_MODEL
+        value: gpt-5.6-luna
+
+      # --- Email invitations (Gmail SMTP) ---
       - key: MAIL_ENABLED
-        value: "false"
+        value: "true"
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
       - key: SMTP_USERNAME
-        sync: false
+        value: sshoster@gmail.com
       - key: SMTP_PASSWORD
-        sync: false
+        sync: false # PLACEHOLDER — 16-character Google app password
       - key: MAIL_FROM
-        sync: false
+        value: sshoster@gmail.com
+
+      # --- Negotiation budgets (defaults; tune if needed) ---
+      - key: NEGOTIATION_MAX_TURNS
+        value: "10"
+      - key: NEGOTIATION_MAX_TOKENS
+        value: "20000"
+      - key: NEGOTIATION_MAX_SECONDS
+        value: "180"
+
+      # --- Safety toggles ---
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: SEED_DEMO
+        value: "false" # demo users are for local development only
