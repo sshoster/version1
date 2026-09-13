@@ -55,6 +55,10 @@ dependencies {
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
 
+    // S3-compatible object storage (AWS S3 / Cloudflare R2 / MinIO) behind the FileStorage port
+    implementation(platform("software.amazon.awssdk:bom:2.25.70"))
+    implementation("software.amazon.awssdk:s3")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "org.mockito")
     }

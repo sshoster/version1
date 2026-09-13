@@ -1,6 +1,6 @@
 # Phased Backlog — Trusted AI Negotiation Platform
 
-Status: Phase 3 complete (automated AI discussion built and tested); Phase 4 is next. Each phase ends with green builds
+Status: Phase 4 complete (proposals & approvals built and tested); Phase 5 is next. Each phase ends with green builds
 and tests, and a short report (done / files / results / risks / next). Acceptance-test numbers refer to design
 doc §14.
 
@@ -49,15 +49,15 @@ doc §14.
 - [x] Angular: `Let the assistants look for a solution` panel with live progress, transcript with per-assistant proposals, inline question answering, plain-language round summary, pause/resume/retry; agent-profile editor in the assistant tab.
 - **Exit criteria (met):** acceptance tests 8, 9, 10, 17, 18 green (`NegotiationFlowIT` — 55 backend tests total); provider failure leaves domain state clean and retryable.
 
-## Phase 4 — Proposals and approvals
+## Phase 4 — Proposals and approvals ✅
 
 **Goal:** versioned proposals, independent human approvals, invalidation on revision, readable timeline.
 
-- [ ] agreements: proposals, `ProposalVersion` (+ diffs), revisions, approval requests, idempotent human-only approvals bound to version + content hash.
-- [ ] Approval invalidation on any revision; obsolete-version approval → controlled conflict; room → `AGREED` only on all-parties-same-version.
-- [ ] Human-readable timeline projection (plain language, authorization-filtered) + `GET /rooms/{id}/timeline`, authorized `GET /rooms/{id}/audit`.
-- [ ] Angular: proposal view with version diff, `Your approval is needed` flow with fair-weight Approve/Reject/Request changes, timeline (`What happened in this discussion`).
-- **Exit criteria:** acceptance tests 11, 12, 13, 14, 21, 22 green.
+- [x] agreements: proposals, immutable `ProposalVersion` documents, revisions, approval requests pinned to version + content hash, idempotent human-only approvals (unique per request+user, idempotency keys, same-decision replay safe).
+- [x] Approval invalidation on any revision (pending requests superseded); obsolete-version approval → controlled 409 (expectedVersion check + pinned request version); room → `AGREED` only when every required party approved the same version; rejection/changes reopen the discussion.
+- [x] Human-readable timeline projection (plain language, authorization-filtered: private events owner-only, audience-scoped events audience-only, negotiation/proposal events parties-only) + `GET /rooms/{id}/timeline`; authorized `GET /rooms/{id}/audit` from Phase 1.
+- [x] Angular: proposals panel with version history, "create formal proposal from the assistants' recommendation", `Your approval is needed` flow with fair-weight Approve/Reject/Request changes (+ optional comment), revision editor with explicit consequence note, timeline under `What happened in this discussion`.
+- **Exit criteria (met):** acceptance tests 11, 12, 13, 14, 21, 22 green (`ApprovalFlowIT` — 60 backend tests total).
 
 ## Phase 5 — Outcomes
 

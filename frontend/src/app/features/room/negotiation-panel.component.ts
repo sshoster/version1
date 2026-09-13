@@ -1,8 +1,9 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../../core/i18n.service';
 import { NegotiationRunView, RoomStatus, TurnProposal } from '../../core/models';
 import { NegotiationService } from '../../core/negotiation.service';
+import { ProposalContent } from '../../core/proposals.service';
 
 /**
  * The automated-round surface: start button, live progress, inline question answering, and the
@@ -64,6 +65,12 @@ import { NegotiationService } from '../../core/negotiation.service';
                       }
                     </ul>
                   </div>
+                  <button
+                    class="btn btn-primary" type="button"
+                    (click)="createProposal.emit({ title: proposal.title, terms: proposal.terms, assumptions: proposal.assumptions, sourceRunId: r.id })"
+                  >
+                    {{ i18n.t('prop.fromRun') }}
+                  </button>
                 }
                 @if (result.agreedPoints.length > 0) {
                   <p><strong>{{ i18n.t('nego.agreedPoints') }}:</strong> {{ result.agreedPoints.join(' · ') }}</p>
@@ -153,6 +160,7 @@ export class NegotiationPanelComponent {
 
   readonly roomId = input.required<string>();
   readonly roomStatus = input.required<RoomStatus>();
+  readonly createProposal = output<ProposalContent>();
 
   protected readonly run = signal<NegotiationRunView | null>(null);
   protected readonly busy = signal(false);

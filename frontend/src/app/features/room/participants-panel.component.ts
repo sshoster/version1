@@ -2,8 +2,10 @@ import { Component, DestroyRef, inject, input, signal } from '@angular/core';
 import { I18nService } from '../../core/i18n.service';
 import { InvitationSummary, ParticipantResponse, PresenceEntry } from '../../core/models';
 import { RoomsService } from '../../core/rooms.service';
+import { AvatarComponent } from '../../shared/avatar.component';
 
 interface ParticipantRow {
+  userId: string;
   displayName: string;
   roles: string;
   status: 'online' | 'recent' | 'offline';
@@ -13,13 +15,17 @@ interface ParticipantRow {
 /** Side panel: who takes part, with live presence (🟢 online / 🟡 recently active / ⚪ offline). */
 @Component({
   selector: 'app-participants-panel',
+  imports: [AvatarComponent],
   template: `
     <div class="card stack panel">
       <h2>{{ i18n.t('presence.title') }}</h2>
       <ul class="list">
         @for (row of rows(); track row.displayName) {
           <li>
-            <span class="dot" [class]="'dot ' + row.status" [attr.aria-label]="statusLabel(row.status)"></span>
+            <span class="avatar-wrap">
+              <app-avatar [userId]="row.userId" [name]="row.displayName" [size]="34" />
+              <span class="dot" [class]="'dot ' + row.status" [attr.aria-label]="statusLabel(row.status)"></span>
+            </span>
             <span class="info">
               <strong>{{ row.displayName }}</strong>
               <span class="muted small">{{ row.roles }}</span>
@@ -45,6 +51,8 @@ interface ParticipantRow {
     .list li { display: flex; gap: var(--space-2); align-items: flex-start; }
     .info { display: flex; flex-direction: column; }
     .small { font-size: 0.78rem; }
+    .avatar-wrap { position: relative; flex-shrink: 0; }
+    .avatar-wrap .dot { position: absolute; inset-block-end: 0; inset-inline-end: -2px; border: 2px solid var(--color-surface); margin: 0; }
     .dot {
       inline-size: 12px; block-size: 12px; border-radius: 50%; margin-block-start: 6px;
       flex-shrink: 0; background: var(--color-border);
@@ -114,6 +122,7 @@ export class ParticipantsPanelComponent {
           ? 'recent'
           : 'offline';
       return {
+        userId: participant.userId,
         displayName: participant.displayName,
         roles: participant.roles.map((role) => this.i18n.t(`room.role.${role}`)).join(', '),
         status,

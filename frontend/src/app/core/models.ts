@@ -206,6 +206,61 @@ export interface NegotiationRunView {
   updatedAt: string;
 }
 
+export type ProposalStatus = 'OPEN' | 'AGREED' | 'CLOSED';
+export type ApprovalRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED';
+export type ApprovalDecision = 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED';
+
+export interface ApprovalView {
+  userId: string;
+  userDisplayName: string;
+  decision: ApprovalDecision;
+  comment: string | null;
+  proposalVersion: number;
+  createdAt: string;
+}
+
+export interface ApprovalRequestView {
+  id: string;
+  proposalId: string;
+  proposalVersion: number;
+  status: ApprovalRequestStatus;
+  requiredUserIds: string[];
+  approvals: ApprovalView[];
+  myDecision: ApprovalDecision | null;
+  createdAt: string;
+}
+
+export interface ProposalVersionView {
+  version: number;
+  title: string;
+  terms: string[];
+  assumptions: string[];
+  createdByDisplayName: string;
+  superseded: boolean;
+  createdAt: string;
+}
+
+export interface ProposalView {
+  id: string;
+  status: ProposalStatus;
+  currentVersion: number;
+  current: ProposalVersionView;
+  versions: ProposalVersionView[];
+  pendingRequest: ApprovalRequestView | null;
+  createdAt: string;
+}
+
+export interface TimelineEntry {
+  id: string;
+  action: string;
+  actorType: 'USER' | 'AI' | 'ADVISOR' | 'SYSTEM';
+  actorDisplayName: string | null;
+  targetType: string | null;
+  targetId: string | null;
+  metadata: Record<string, string>;
+  occurredAt: string;
+}
+
 export interface AgentProfile {
   goals: string;
   boundaries: string;

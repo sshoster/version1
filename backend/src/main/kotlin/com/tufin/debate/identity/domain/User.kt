@@ -11,6 +11,8 @@ class User(
     var displayName: String,
     var passwordHash: String,
     var timezone: String = "Asia/Jerusalem",
+    var avatarKey: String? = null,
+    var avatarContentType: String? = null,
     val schemaVersion: Int = 1,
     val createdAt: Instant,
 )

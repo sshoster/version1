@@ -21,7 +21,10 @@ import java.time.Instant
 class WebSocketOutboxPublisher(private val messagingTemplate: SimpMessagingTemplate) : OutboxPublisher {
 
     companion object {
-        private val AUDIENCE_SCOPED_TYPES = setOf("SHARED_ITEM_PUBLISHED", "SHARED_ITEM_WITHDRAWN", "QUESTION_CREATED")
+        private val AUDIENCE_SCOPED_TYPES = setOf(
+            "SHARED_ITEM_PUBLISHED", "SHARED_ITEM_WITHDRAWN", "QUESTION_CREATED",
+            "APPROVAL_REQUESTED", "APPROVAL_RECORDED", "FILE_SHARED", "FILE_WITHDRAWN",
+        )
     }
 
     override fun publish(event: OutboxEvent) {
@@ -50,7 +53,10 @@ class NotificationOutboxPublisher(private val notifications: NotificationReposit
     private val log = LoggerFactory.getLogger(javaClass)
 
     companion object {
-        private val NOTIFYING_TYPES = setOf("SHARED_ITEM_PUBLISHED", "SHARED_ITEM_WITHDRAWN", "QUESTION_CREATED")
+        private val NOTIFYING_TYPES = setOf(
+            "SHARED_ITEM_PUBLISHED", "SHARED_ITEM_WITHDRAWN", "QUESTION_CREATED",
+            "APPROVAL_REQUESTED", "APPROVAL_RECORDED", "FILE_SHARED",
+        )
     }
 
     override fun publish(event: OutboxEvent) {

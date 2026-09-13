@@ -10,6 +10,10 @@ app:
     key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
   llm:
     provider: fake
+  storage:
+    provider: local
+    local:
+      path: build/test-uploads
   invitations:
     base-url: http://localhost:4200
   outbox:

@@ -17,6 +17,10 @@ spring:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/debate?replicaSet=rs0&directConnection=true}
       auto-index-creation: false
+  servlet:
+    multipart:
+      max-file-size: 51MB
+      max-request-size: 55MB
   mail:
     host: ${SMTP_HOST:smtp.gmail.com}
     port: ${SMTP_PORT:587}
@@ -78,6 +82,18 @@ app:
       model: ${OPENAI_MODEL:gpt-5.6-luna}
       base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
       timeout-seconds: 60
+  storage:
+    # "local" (default) or "s3" — S3-compatible: AWS S3, Cloudflare R2, MinIO, GCS interop.
+    provider: ${STORAGE_PROVIDER:local}
+    local:
+      path: ${FILE_STORAGE_PATH:./data/uploads}
+    s3:
+      bucket: ${S3_BUCKET:debate-files}
+      region: ${S3_REGION:us-east-1}
+      endpoint: ${S3_ENDPOINT:}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
+      path-style: ${S3_PATH_STYLE:true}
   negotiation:
     max-turns: ${NEGOTIATION_MAX_TURNS:10}
     max-total-tokens: ${NEGOTIATION_MAX_TOKENS:20000}

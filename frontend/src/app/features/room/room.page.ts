@@ -6,11 +6,15 @@ import { I18nService } from '../../core/i18n.service';
 import { InvitationCreated, ParticipantResponse, ParticipantRole, RoomResponse } from '../../core/models';
 import { RoomEventsService } from '../../core/room-events.service';
 import { RoomsService } from '../../core/rooms.service';
+import { ProposalContent } from '../../core/proposals.service';
 import { AssistantPanelComponent } from './assistant-panel.component';
+import { FilesPanelComponent } from './files-panel.component';
 import { NegotiationPanelComponent } from './negotiation-panel.component';
 import { ParticipantsPanelComponent } from './participants-panel.component';
+import { ProposalsPanelComponent } from './proposals-panel.component';
 import { ShareDialogComponent, ShareIntent } from './share-dialog.component';
 import { SharedPanelComponent } from './shared-panel.component';
+import { TimelineComponent } from './timeline.component';
 
 /**
  * The one-screen Discussion surface (design doc §11.3): shared/assistant switch, plain-language
@@ -20,7 +24,8 @@ import { SharedPanelComponent } from './shared-panel.component';
   selector: 'app-room-page',
   imports: [
     FormsModule, AssistantPanelComponent, SharedPanelComponent, ShareDialogComponent,
-    NegotiationPanelComponent, ParticipantsPanelComponent,
+    NegotiationPanelComponent, ParticipantsPanelComponent, ProposalsPanelComponent, TimelineComponent,
+    FilesPanelComponent,
   ],
   template: `
     <div class="page room-page">
@@ -35,7 +40,13 @@ import { SharedPanelComponent } from './shared-panel.component';
         </header>
 
         @if (isParty()) {
-          <app-negotiation-panel [roomId]="roomId()" [roomStatus]="r.status" />
+          <app-negotiation-panel
+            [roomId]="roomId()" [roomStatus]="r.status"
+            (createProposal)="createProposal($event)"
+          />
+        }
+        <app-proposals-panel [roomId]="roomId()" [isParty]="isParty()" />
+        @if (isParty()) {
           <div class="tabs" role="tablist">
             <button
               role="tab" class="tab" [class.active]="tab() === 'shared'"
@@ -64,6 +75,12 @@ import { SharedPanelComponent } from './shared-panel.component';
             />
           }
         </div>
+
+        <app-files-panel
+          [roomId]="roomId()"
+          [canUpload]="isParty() || isAdvisor()"
+          [participants]="participants()"
+        />
 
         <details class="card">
           <summary>{{ i18n.t('more.title') }}</summary>
@@ -118,6 +135,8 @@ import { SharedPanelComponent } from './shared-panel.component';
             }
           </div>
         </details>
+
+        <app-timeline [roomId]="roomId()" />
         </div>
 
         <aside class="side-column">
@@ -193,8 +212,11 @@ export class RoomPage {
   private readonly assistantPanel = viewChild(AssistantPanelComponent);
   private readonly negotiationPanel = viewChild(NegotiationPanelComponent);
   private readonly participantsPanel = viewChild(ParticipantsPanelComponent);
+  private readonly proposalsPanel = viewChild(ProposalsPanelComponent);
+  private readonly filesPanel = viewChild(FilesPanelComponent);
 
   protected readonly isOwner = computed(() => this.room()?.myRoles.includes('OWNER') ?? false);
+  protected readonly isAdvisor = computed(() => this.room()?.myRoles.includes('ADVISOR') ?? false);
   protected readonly isParty = computed(() => {
     const roles = this.room()?.myRoles ?? [];
     return roles.includes('PARTY') || roles.includes('OWNER');
@@ -233,6 +255,17 @@ export class RoomPage {
               this.negotiationPanel()?.refresh();
               this.reloadRoom(id);
               break;
+            case 'PROPOSAL_CREATED':
+            case 'PROPOSAL_REVISED':
+            case 'APPROVAL_REQUESTED':
+            case 'APPROVAL_RECORDED':
+              this.proposalsPanel()?.refresh();
+              this.reloadRoom(id);
+              break;
+            case 'FILE_SHARED':
+            case 'FILE_WITHDRAWN':
+              this.filesPanel()?.refresh();
+              break;
           }
         });
     });
@@ -257,6 +290,10 @@ export class RoomPage {
 
   protected openShare(intent: ShareIntent): void {
     this.shareIntent.set(intent);
+  }
+
+  protected createProposal(content: ProposalContent): void {
+    this.proposalsPanel()?.createFrom(content);
   }
 
   protected onPublished(): void {

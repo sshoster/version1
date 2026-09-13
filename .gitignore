@@ -9,6 +9,9 @@ build/
 ### Secrets ###
 .env
 
+### Local file storage ###
+data/
+
 ### Frontend ###
 frontend/node_modules/
 frontend/dist/

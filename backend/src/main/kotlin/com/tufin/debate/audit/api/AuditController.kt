@@ -28,6 +28,19 @@ data class AuditEventResponse(
 )
 
 @RestController
+class TimelineController(private val timelineService: com.tufin.debate.audit.application.TimelineService) {
+
+    /** Plain-language timeline, filtered to what the caller may know about (all members). */
+    @GetMapping("/api/v1/rooms/{roomId}/timeline")
+    fun timeline(
+        @PathVariable roomId: String,
+        @RequestParam(defaultValue = "200") limit: Int,
+        @AuthenticationPrincipal user: AuthenticatedUser,
+    ): List<com.tufin.debate.audit.application.TimelineEntry> =
+        timelineService.timeline(roomId, user.userId, limit)
+}
+
+@RestController
 @RequestMapping("/api/v1/rooms/{roomId}/audit")
 class AuditController(
     private val auditService: AuditService,

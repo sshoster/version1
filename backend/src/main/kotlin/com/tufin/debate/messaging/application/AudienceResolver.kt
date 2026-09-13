@@ -1,13 +1,33 @@
 package com.tufin.debate.messaging.application
 
+import com.tufin.debate.messaging.domain.AudienceSnapshot
 import com.tufin.debate.messaging.domain.VisibilityScope
+import com.tufin.debate.messaging.infrastructure.AudienceSnapshotRepository
 import com.tufin.debate.participants.application.ParticipantDirectory
 import com.tufin.debate.participants.domain.Participant
 import com.tufin.debate.participants.domain.ParticipantRole
+import com.tufin.debate.shared.Ids
 import com.tufin.debate.shared.errors.BadRequestException
 import org.springframework.stereotype.Service
+import java.time.Instant
 
 data class Audience(val participantIds: List<String>, val userIds: List<String>)
+
+/** Application-level snapshot writer, reusable by other modules (files) without touching infra. */
+@Service
+class AudienceSnapshotWriter(private val snapshots: AudienceSnapshotRepository) {
+    fun create(roomId: String, scope: VisibilityScope, audience: Audience): AudienceSnapshot =
+        snapshots.insert(
+            AudienceSnapshot(
+                id = Ids.newId(),
+                roomId = roomId,
+                scope = scope,
+                participantIds = audience.participantIds,
+                userIds = audience.userIds,
+                createdAt = Instant.now(),
+            ),
+        )
+}
 
 /**
  * Resolves a visibility scope into concrete recipients from SERVER state (trust-model invariant 4:
