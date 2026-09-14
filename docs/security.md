@@ -47,6 +47,10 @@ column shows where each control landed; §9 lists the honest remaining gaps.
   client secret exists in the system.
 - Access token ~15 min; refresh token rotated on every use (30-day TTL), stored server-side
   hashed, family revoked on reuse detection.
+- Password change (`POST /users/me/password`) requires the current password, so a hijacked
+  session cannot silently lock the owner out. Minimum password length is 5 characters — an
+  explicit owner decision favoring ease of use; Argon2id hashing, rate-limited login, and
+  generic auth errors remain the guessing defenses.
 - Passwords: Argon2id via Spring Security's encoder.
 - All auth state validated server-side per request; WebSocket handshake authenticates via the same JWT.
 

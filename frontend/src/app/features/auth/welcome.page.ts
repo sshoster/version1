@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n.service';
+import { DemoFlowComponent } from '../../shared/demo-flow.component';
+import { DemoShotsComponent } from '../../shared/demo-shots.component';
 
 /** Google Identity Services global, loaded on demand from accounts.google.com. */
 declare const google: {
@@ -16,7 +18,7 @@ declare const google: {
 
 @Component({
   selector: 'app-welcome-page',
-  imports: [FormsModule],
+  imports: [FormsModule, DemoFlowComponent, DemoShotsComponent],
   template: `
     <div class="page">
       <div class="card stack">
@@ -63,6 +65,9 @@ declare const google: {
           <div id="googleButton" class="google-button"></div>
         </div>
       </div>
+
+      <app-demo-flow />
+      <app-demo-shots />
     </div>
   `,
   styles: `

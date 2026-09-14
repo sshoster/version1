@@ -4,10 +4,11 @@ import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n.service';
 import { InvitationPublicInfo } from '../../core/models';
 import { RoomsService } from '../../core/rooms.service';
+import { DemoFlowComponent } from '../../shared/demo-flow.component';
 
 @Component({
   selector: 'app-accept-invite-page',
-  imports: [RouterLink],
+  imports: [RouterLink, DemoFlowComponent],
   template: `
     <div class="page">
       <div class="card stack">
@@ -44,6 +45,8 @@ import { RoomsService } from '../../core/rooms.service';
           <div class="error-box">{{ i18n.t('invite.used') }}</div>
         }
       </div>
+
+      <app-demo-flow />
     </div>
   `,
 })

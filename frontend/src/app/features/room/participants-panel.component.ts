@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import { I18nService } from '../../core/i18n.service';
 import { InvitationSummary, ParticipantResponse, PresenceEntry } from '../../core/models';
 import { RoomsService } from '../../core/rooms.service';
@@ -16,15 +16,34 @@ interface ParticipantRow {
 
 /**
  * Who takes part, with live presence (🟢 online / 🟡 recently active / ⚪ offline).
- * Desktop: sticky side panel. Mobile: a compact horizontal avatar strip at the top of the page.
- * Admins can promote/demote other admins here (never the creator, never themselves).
+ * Desktop: sticky side panel. Mobile: a floating button on the side that expands into a
+ * floating, collapsible list of everyone. Admins can promote/demote other admins here
+ * (never the creator, never themselves).
  */
 @Component({
   selector: 'app-participants-panel',
   imports: [AvatarComponent],
   template: `
-    <div class="card stack panel">
-      <h2>{{ i18n.t('presence.title') }}</h2>
+    <!-- Mobile only: floating toggle with the online count. -->
+    <button
+      class="fab" type="button"
+      [attr.aria-label]="i18n.t('presence.title')" [attr.aria-expanded]="expanded()"
+      (click)="expanded.set(!expanded())"
+    >
+      👥
+      @if (onlineCount() > 0) {
+        <span class="fab-badge">{{ onlineCount() }}</span>
+      }
+    </button>
+    @if (expanded()) {
+      <div class="panel-backdrop" (click)="expanded.set(false)" aria-hidden="true"></div>
+    }
+
+    <div class="card stack panel" [class.open]="expanded()">
+      <div class="panel-head">
+        <h2>{{ i18n.t('presence.title') }}</h2>
+        <button class="panel-close" type="button" [attr.aria-label]="i18n.t('common.close')" (click)="expanded.set(false)">✕</button>
+      </div>
       <ul class="list">
         @for (row of rows(); track row.participantId) {
           <li>
@@ -57,7 +76,9 @@ interface ParticipantRow {
     </div>
   `,
   styles: `
-    .panel h2 { font-size: 1rem; margin-block-end: var(--space-2); }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; }
+    .panel h2 { font-size: 1rem; margin: 0 0 var(--space-2); }
+    .fab, .panel-close, .panel-backdrop { display: none; }
     .list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
     .list li { display: flex; gap: var(--space-2); align-items: flex-start; }
     .info { display: flex; flex-direction: column; min-width: 0; }
@@ -75,15 +96,35 @@ interface ParticipantRow {
     .dot.waiting { background: transparent; font-size: 12px; line-height: 1; margin-block-start: 4px; }
     .pending { opacity: 0.8; }
 
-    /* Mobile: compact horizontal avatar strip — avatars, presence dots, first names only. */
+    /* Mobile: the panel becomes a floating, collapsible list opened from a side button. */
     @media (max-width: 999px) {
-      .panel { padding: var(--space-2) var(--space-3); }
-      .panel h2 { display: none; }
-      .list { display: flex; flex-direction: row; gap: var(--space-3); overflow-x: auto; padding-block: var(--space-1); }
-      .list li { flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; max-width: 72px; }
-      .info { align-items: center; }
-      .name { font-size: 0.72rem; font-weight: 500; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .detail { display: none; }
+      .fab {
+        display: flex; align-items: center; justify-content: center;
+        position: fixed; inset-inline-end: 14px; inset-block-end: 18px;
+        inline-size: 52px; block-size: 52px; border-radius: 999px; border: none;
+        background: var(--color-primary); color: #fff; font-size: 1.35rem; cursor: pointer;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); z-index: 46;
+      }
+      .fab-badge {
+        position: absolute; inset-block-start: -4px; inset-inline-start: -4px;
+        background: #2e9e5b; color: #fff; border-radius: 999px;
+        min-inline-size: 20px; block-size: 20px; padding: 0 5px; font-size: 0.72rem; font-weight: 700;
+        display: inline-flex; align-items: center; justify-content: center;
+        border: 2px solid var(--color-surface);
+      }
+      .panel-backdrop { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.25); z-index: 45; }
+      .panel { display: none; }
+      .panel.open {
+        display: flex; flex-direction: column;
+        position: fixed; inset-inline-end: 12px; inset-block-end: 82px;
+        inline-size: min(80vw, 300px); max-block-size: 65vh; overflow-y: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); z-index: 46;
+      }
+      .panel-close {
+        display: block; border: none; background: none; cursor: pointer;
+        font-size: 1rem; min-inline-size: 36px; min-block-size: 36px; border-radius: 8px;
+      }
+      .panel-close:hover { background: var(--color-bg); }
     }
   `,
 })
@@ -99,6 +140,9 @@ export class ParticipantsPanelComponent {
 
   protected readonly rows = signal<ParticipantRow[]>([]);
   protected readonly pendingInvitations = signal<InvitationSummary[]>([]);
+  /** Mobile floating list open/closed; irrelevant on desktop where the panel is always shown. */
+  protected readonly expanded = signal(false);
+  protected readonly onlineCount = computed(() => this.rows().filter((row) => row.status === 'online').length);
 
   private participants: ParticipantResponse[] = [];
   private interval: ReturnType<typeof setInterval> | null = null;

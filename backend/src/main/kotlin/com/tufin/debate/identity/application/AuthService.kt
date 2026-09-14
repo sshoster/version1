@@ -102,6 +102,16 @@ class AuthService(
         }
     }
 
+    /** Requires the current password (also blocks a hijacked session from silently locking the owner out). */
+    fun changePassword(userId: String, currentPassword: String, newPassword: String) {
+        val user = users.findById(userId).orElseThrow { UnauthorizedException("Please sign in again") }
+        if (!passwordEncoder.matches(currentPassword, user.passwordHash)) {
+            throw UnauthorizedException("The current password is incorrect")
+        }
+        user.passwordHash = passwordEncoder.encode(newPassword)
+        users.save(user)
+    }
+
     fun refresh(rawRefreshToken: String): TokenPair {
         val presented = refreshTokens.findByTokenHash(hash(rawRefreshToken))
             ?: throw UnauthorizedException("Please sign in again")

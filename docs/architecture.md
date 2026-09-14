@@ -98,7 +98,7 @@ time, errors, the outbox/idempotency primitives, and domain-event plumbing.
 Module responsibilities:
 
 - **identity** — users, registration/login, optional Google sign-in (server-verified ID tokens),
-  account profile edit, avatars, JWT issuance & refresh rotation.
+  account profile edit + password change, avatars, JWT issuance & refresh rotation.
 - **discussion** — `DiscussionRoom` aggregate and its state machine.
 - **participants** — participants, invitations (hashed single-use tokens, expiry, revocation), role assignment.
 - **permissions** — the single authorization service: role × scope × resource checks used by every other module; audience-snapshot resolution.

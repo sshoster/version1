@@ -44,6 +44,29 @@ import { AvatarComponent } from '../../shared/avatar.component';
 
           <p class="muted small">{{ i18n.t('account.roomNamesNote') }}</p>
         </div>
+
+        <div class="card stack">
+          <h2>{{ i18n.t('account.passwordTitle') }}</h2>
+          <form class="stack" (ngSubmit)="changePassword()">
+            <label for="currentPassword">{{ i18n.t('account.currentPassword') }}</label>
+            <input id="currentPassword" name="currentPassword" type="password" dir="ltr"
+                   autocomplete="current-password" [(ngModel)]="currentPassword" required />
+
+            <label for="newPassword">{{ i18n.t('account.newPassword') }}</label>
+            <input id="newPassword" name="newPassword" type="password" dir="ltr" minlength="5"
+                   autocomplete="new-password" [(ngModel)]="newPassword" required />
+            <p class="muted small">{{ i18n.t('auth.passwordHint') }}</p>
+
+            @if (passwordError()) {
+              <div class="error-box" role="alert">{{ passwordError() }}</div>
+            }
+            <button class="btn btn-secondary" type="submit"
+                    [disabled]="passwordBusy() || !currentPassword || newPassword.length < 5">
+              {{ passwordChanged() ? i18n.t('account.passwordChanged') : i18n.t('account.changePassword') }}
+            </button>
+          </form>
+          <p class="muted small">{{ i18n.t('account.googlePasswordNote') }}</p>
+        </div>
       }
     </div>
   `,
@@ -66,7 +89,12 @@ export class ProfilePage {
   protected readonly saved = signal(false);
   protected readonly photoSaved = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly passwordBusy = signal(false);
+  protected readonly passwordChanged = signal(false);
+  protected readonly passwordError = signal<string | null>(null);
   protected displayName = this.auth.user()?.displayName ?? '';
+  protected currentPassword = '';
+  protected newPassword = '';
 
   protected save(): void {
     const name = this.displayName.trim();
@@ -82,6 +110,25 @@ export class ProfilePage {
       error: (err: { error?: { message?: string } }) => {
         this.busy.set(false);
         this.error.set(err?.error?.message ?? this.i18n.t('auth.genericError'));
+      },
+    });
+  }
+
+  protected changePassword(): void {
+    if (this.passwordBusy() || !this.currentPassword || this.newPassword.length < 5) return;
+    this.passwordBusy.set(true);
+    this.passwordError.set(null);
+    this.auth.changePassword(this.currentPassword, this.newPassword).subscribe({
+      next: () => {
+        this.passwordBusy.set(false);
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.passwordChanged.set(true);
+        setTimeout(() => this.passwordChanged.set(false), 2500);
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.passwordBusy.set(false);
+        this.passwordError.set(err?.error?.message ?? this.i18n.t('auth.genericError'));
       },
     });
   }

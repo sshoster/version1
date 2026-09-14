@@ -157,8 +157,8 @@ import { TimelineComponent } from './timeline.component';
     .room-layout { display: flex; flex-direction: column; gap: var(--space-3); }
     .main-column { flex: 1; min-width: 0; order: 1; }
     .start-col { order: 2; }
-    /* Mobile: participants strip on top of the page. */
-    .end-col { order: 0; }
+    /* Mobile: the participants panel floats from a side button, so the column itself renders nothing. */
+    .end-col { order: 2; }
     .code-chip {
       display: inline-flex; align-items: center; margin-block-start: var(--space-1);
       border: 1px dashed var(--color-border); background: var(--color-bg); color: var(--color-text);

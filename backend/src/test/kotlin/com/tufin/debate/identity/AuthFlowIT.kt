@@ -67,11 +67,49 @@ class AuthFlowIT : IntegrationTestBase() {
     }
 
     @Test
-    fun `weak passwords are rejected`() {
+    fun `password change requires the current password and takes effect at once`() {
+        val user = registerUser("Chen")
+
+        // Wrong current password → rejected, nothing changes.
+        val wrong = post(
+            "/api/v1/users/me/password",
+            mapOf("currentPassword" to "not-my-password", "newPassword" to "fresh-12345"),
+            user.accessToken,
+        )
+        assertEquals(401, wrong.statusCode.value())
+
+        // Correct current password → old stops working, new works.
+        val ok = post(
+            "/api/v1/users/me/password",
+            mapOf("currentPassword" to user.password, "newPassword" to "fresh-12345"),
+            user.accessToken,
+        )
+        assertEquals(200, ok.statusCode.value(), ok.body)
+        assertEquals(401, post("/api/v1/auth/login", mapOf("email" to user.email, "password" to user.password)).statusCode.value())
+        assertEquals(200, post("/api/v1/auth/login", mapOf("email" to user.email, "password" to "fresh-12345")).statusCode.value())
+
+        // Too-short new password → validation error.
+        val short = post(
+            "/api/v1/users/me/password",
+            mapOf("currentPassword" to "fresh-12345", "newPassword" to "tiny"),
+            user.accessToken,
+        )
+        assertEquals(400, short.statusCode.value())
+    }
+
+    @Test
+    fun `passwords shorter than 5 characters are rejected`() {
         val response = post(
             "/api/v1/auth/register",
-            mapOf("email" to "weak@example.test", "displayName" to "Weak", "password" to "short"),
+            mapOf("email" to "weak@example.test", "displayName" to "Weak", "password" to "tiny"),
         )
         assertEquals(400, response.statusCode.value())
+
+        // Exactly 5 is accepted.
+        val minimal = post(
+            "/api/v1/auth/register",
+            mapOf("email" to "weak-ok@example.test", "displayName" to "Weak", "password" to "ab123"),
+        )
+        assertEquals(201, minimal.statusCode.value(), minimal.body)
     }
 }

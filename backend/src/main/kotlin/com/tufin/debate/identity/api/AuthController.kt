@@ -20,7 +20,7 @@ import org.springframework.validation.annotation.Validated
 data class RegisterRequest(
     @field:NotBlank @field:Email val email: String = "",
     @field:NotBlank @field:Size(min = 1, max = 80) val displayName: String = "",
-    @field:NotBlank @field:Size(min = 10, max = 200, message = "Password must be at least 10 characters")
+    @field:NotBlank @field:Size(min = 5, max = 200, message = "Password must be at least 5 characters")
     val password: String = "",
 )
 
@@ -84,6 +84,12 @@ data class UpdateProfileRequest(
     @field:NotBlank @field:Size(min = 1, max = 80) val displayName: String = "",
 )
 
+data class ChangePasswordRequest(
+    @field:NotBlank val currentPassword: String = "",
+    @field:NotBlank @field:Size(min = 5, max = 200, message = "Password must be at least 5 characters")
+    val newPassword: String = "",
+)
+
 @RestController
 @Validated
 @RequestMapping("/api/v1/users")
@@ -93,6 +99,14 @@ class UserController(private val authService: AuthService) {
     fun me(@AuthenticationPrincipal user: AuthenticatedUser): UserResponse {
         val stored = authService.findMe(user.userId)
         return UserResponse(user.userId, stored?.email ?: user.email, stored?.displayName ?: user.displayName)
+    }
+
+    @PostMapping("/me/password")
+    fun changePassword(
+        @RequestBody @jakarta.validation.Valid request: ChangePasswordRequest,
+        @AuthenticationPrincipal user: AuthenticatedUser,
+    ) {
+        authService.changePassword(user.userId, request.currentPassword, request.newPassword)
     }
 
     @PatchMapping("/me")

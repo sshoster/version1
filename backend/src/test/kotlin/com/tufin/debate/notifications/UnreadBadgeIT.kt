@@ -33,12 +33,11 @@ class UnreadBadgeIT : IntegrationTestBase() {
         val aliceUnread = awaitUnread(alice.accessToken, roomId)
         assertEquals(roomId, aliceUnread["roomId"].asText())
 
-        // Reading the room clears the badges (Bob also has one from the system status change).
-        post("/api/v1/notifications/rooms/$roomId/read", null, alice.accessToken)
-        assertEquals(0, unreadFor(alice.accessToken, roomId))
+        // Reading the room clears the badges. The join fans out several events, so keep
+        // marking read until the outbox has quiesced and the count stays at zero.
+        drainUnread(alice.accessToken, roomId)
         awaitUnread(bob.accessToken, roomId)
-        post("/api/v1/notifications/rooms/$roomId/read", null, bob.accessToken)
-        assertEquals(0, unreadFor(bob.accessToken, roomId))
+        drainUnread(bob.accessToken, roomId)
 
         // Alice renaming the room is activity for Bob — and must NOT re-badge Alice herself.
         patch("/api/v1/rooms/$roomId", mapOf("title" to "Badge room v2"), alice.accessToken)
@@ -105,6 +104,20 @@ class UnreadBadgeIT : IntegrationTestBase() {
             Thread.sleep(200)
         }
         error("no unread notifications for room $roomId in time")
+    }
+
+    /** Marks the room read repeatedly until the count stays at zero (in-flight outbox events included). */
+    private fun drainUnread(token: String, roomId: String, timeoutSeconds: Int = 15) {
+        val deadline = System.currentTimeMillis() + timeoutSeconds * 1000L
+        while (System.currentTimeMillis() < deadline) {
+            post("/api/v1/notifications/rooms/$roomId/read", null, token)
+            Thread.sleep(400)
+            if (unreadFor(token, roomId) == 0) {
+                Thread.sleep(400)
+                if (unreadFor(token, roomId) == 0) return
+            }
+        }
+        error("unread notifications for room $roomId kept arriving past the deadline")
     }
 
     private fun unreadFor(token: String, roomId: String): Int =

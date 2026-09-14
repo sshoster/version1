@@ -4,6 +4,8 @@ import { Router } from '@angular/router';
 import { switchMap, of, map, catchError } from 'rxjs';
 import { I18nService } from '../../core/i18n.service';
 import { RoomsService } from '../../core/rooms.service';
+import { DemoFlowComponent } from '../../shared/demo-flow.component';
+import { DemoShotsComponent } from '../../shared/demo-shots.component';
 
 /**
  * Conversational creation: three short questions, one at a time (design doc §11.1).
@@ -11,7 +13,7 @@ import { RoomsService } from '../../core/rooms.service';
  */
 @Component({
   selector: 'app-create-discussion-page',
-  imports: [FormsModule],
+  imports: [FormsModule, DemoFlowComponent, DemoShotsComponent],
   template: `
     <div class="page">
       <div class="card stack">
@@ -62,6 +64,11 @@ import { RoomsService } from '../../core/rooms.service';
           }
         }
       </div>
+
+      @if (step() === 1) {
+        <app-demo-flow />
+        <app-demo-shots />
+      }
     </div>
   `,
   styles: `
