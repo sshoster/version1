@@ -55,6 +55,9 @@ interface ParticipantRow {
               <strong class="name">{{ row.displayName }}{{ row.isAdmin ? ' ★' : '' }}</strong>
               <span class="muted small detail">{{ row.roles }}</span>
               <span class="muted small detail">{{ statusLabel(row.status) }}</span>
+              @if (pendingAnswerUserIds().includes(row.userId)) {
+                <span class="needs-answer detail">✍️ {{ i18n.t('presence.needsAnswer') }}</span>
+              }
               @if (canToggleAdmin(row)) {
                 <button class="btn btn-quiet mini detail" type="button" (click)="toggleAdmin(row)">
                   {{ row.isAdmin ? i18n.t('admin.removeAdmin') : i18n.t('admin.makeAdmin') }}
@@ -95,6 +98,11 @@ interface ParticipantRow {
     .dot.offline { background: #c2c9d0; }
     .dot.waiting { background: transparent; font-size: 12px; line-height: 1; margin-block-start: 4px; }
     .pending { opacity: 0.8; }
+    .needs-answer {
+      font-size: 0.75rem; font-weight: 600; color: #8a6410;
+      background: #fdf1d7; border-radius: 999px; padding: 1px 8px;
+      align-self: flex-start; margin-block-start: 2px;
+    }
 
     /* Mobile: the panel becomes a floating, collapsible list opened from a side button. */
     @media (max-width: 999px) {
@@ -137,6 +145,8 @@ export class ParticipantsPanelComponent {
   readonly isOwner = input.required<boolean>();
   readonly creatorUserId = input<string>('');
   readonly myUserId = input<string>('');
+  /** Whose assistants are waiting on a private answer (from the negotiation run). */
+  readonly pendingAnswerUserIds = input<string[]>([]);
 
   protected readonly rows = signal<ParticipantRow[]>([]);
   protected readonly pendingInvitations = signal<InvitationSummary[]>([]);

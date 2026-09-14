@@ -230,6 +230,8 @@ export interface NegotiationRunView {
   result: RoundResult | null;
   turns: NegotiationTurnView[];
   myOpenQuestions: QuestionView[];
+  /** Who still owes their assistant an answer — user IDs only, never question content. */
+  pendingAnswerUserIds: string[];
   createdAt: string;
   updatedAt: string;
 }

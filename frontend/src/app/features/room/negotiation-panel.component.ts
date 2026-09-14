@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../../core/i18n.service';
-import { NegotiationRunView, RoomStatus, TurnProposal } from '../../core/models';
+import { NegotiationRunView, ParticipantResponse, RoomStatus, TurnProposal } from '../../core/models';
 import { NegotiationService } from '../../core/negotiation.service';
 import { ProposalContent } from '../../core/proposals.service';
 
@@ -43,7 +43,9 @@ import { ProposalContent } from '../../core/proposals.service';
                   }
                 </div>
               } @else {
-                <p class="muted">{{ i18n.t('status.WAITING_FOR_USER') }}</p>
+                @if (pendingNames(); as names) {
+                  <p class="muted">⏳ {{ i18n.t('nego.waitingFor', names) }}</p>
+                }
               }
             }
             @case ('PAUSED') {
@@ -160,7 +162,10 @@ export class NegotiationPanelComponent {
 
   readonly roomId = input.required<string>();
   readonly roomStatus = input.required<RoomStatus>();
+  readonly participants = input<ParticipantResponse[]>([]);
   readonly createProposal = output<ProposalContent>();
+  /** Who still owes their assistant an answer — the room page relays this to the participants panel. */
+  readonly pendingAnswers = output<string[]>();
 
   protected readonly run = signal<NegotiationRunView | null>(null);
   protected readonly busy = signal(false);
@@ -184,9 +189,23 @@ export class NegotiationPanelComponent {
 
   refresh(): void {
     this.negotiation.runs(this.roomId()).subscribe({
-      next: (runs) => this.run.set(runs[0] ?? null),
+      next: (runs) => {
+        const run = runs[0] ?? null;
+        this.run.set(run);
+        this.pendingAnswers.emit(run?.status === 'WAITING_FOR_USER' ? (run.pendingAnswerUserIds ?? []) : []);
+      },
       error: () => undefined, // observers/advisors: panel simply stays hidden
     });
+  }
+
+  /** Display names of everyone who still owes an answer (null while unknown → generic text). */
+  protected pendingNames(): string | null {
+    const ids = this.run()?.pendingAnswerUserIds ?? [];
+    if (ids.length === 0) return null;
+    const names = ids
+      .map((id) => this.participants().find((participant) => participant.userId === id)?.displayName)
+      .filter((name): name is string => !!name);
+    return names.length ? names.join(', ') : null;
   }
 
   protected start(): void {

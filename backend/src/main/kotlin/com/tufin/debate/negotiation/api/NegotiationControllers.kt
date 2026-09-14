@@ -62,6 +62,8 @@ data class RunView(
     val result: RoundResult?,
     val turns: List<TurnView>,
     val myOpenQuestions: List<QuestionView>,
+    /** Who still owes their assistant an answer — user IDs only, never the question content. */
+    val pendingAnswerUserIds: List<String>,
     val createdAt: Instant,
     val updatedAt: Instant,
 )
@@ -180,6 +182,9 @@ class NegotiationController(
         }
         val open = questions.findByRunIdAndToUserIdAndStatus(runId, user.userId, QuestionStatus.OPEN)
             .map { QuestionView(it.id, it.text, it.status, it.createdAt) }
+        val pendingAnswerUserIds = questions.findByRunIdAndStatusOrderByCreatedAtAsc(runId, QuestionStatus.OPEN)
+            .map { it.toUserId }
+            .distinct()
         return RunView(
             id = run.id,
             status = run.status,
@@ -189,6 +194,7 @@ class NegotiationController(
             result = run.result,
             turns = turnViews,
             myOpenQuestions = open,
+            pendingAnswerUserIds = pendingAnswerUserIds,
             createdAt = run.createdAt,
             updatedAt = run.updatedAt,
         )

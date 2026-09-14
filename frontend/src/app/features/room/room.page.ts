@@ -76,8 +76,9 @@ import { TimelineComponent } from './timeline.component';
 
             @if (isParty()) {
               <app-negotiation-panel
-                [roomId]="roomId()" [roomStatus]="r.status"
+                [roomId]="roomId()" [roomStatus]="r.status" [participants]="participants()"
                 (createProposal)="createProposal($event)"
+                (pendingAnswers)="pendingAnswerIds.set($event)"
               />
             }
             <app-proposals-panel [roomId]="roomId()" [isParty]="isParty()" />
@@ -135,6 +136,7 @@ import { TimelineComponent } from './timeline.component';
             <app-participants-panel
               [roomId]="roomId()" [isOwner]="isOwner()"
               [creatorUserId]="r.ownerUserId" [myUserId]="auth.user()?.id ?? ''"
+              [pendingAnswerUserIds]="pendingAnswerIds()"
             />
           </aside>
         </div>
@@ -214,6 +216,8 @@ export class RoomPage {
   private readonly joinRequestsCard = viewChild(JoinRequestsCardComponent);
 
   protected readonly codeCopied = signal(false);
+  /** Relayed from the negotiation panel to the participants panel (who owes an answer). */
+  protected readonly pendingAnswerIds = signal<string[]>([]);
 
   protected readonly isOwner = computed(() => this.room()?.myRoles.includes('OWNER') ?? false);
   protected readonly isAdvisor = computed(() => this.room()?.myRoles.includes('ADVISOR') ?? false);
