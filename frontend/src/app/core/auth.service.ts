@@ -34,6 +34,16 @@ export class AuthService {
       .pipe(tap((response) => this.store(response)));
   }
 
+  /** Edits the account profile and refreshes the locally stored user. */
+  updateProfile(displayName: string): Observable<UserResponse> {
+    return this.http.patch<UserResponse>('/api/v1/users/me', { displayName }).pipe(
+      tap((user) => {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        this.userSignal.set(user);
+      }),
+    );
+  }
+
   logout(): void {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);

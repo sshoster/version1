@@ -1,34 +1,68 @@
 <header class="app-header">
-  <a routerLink="/" class="brand">{{ i18n.t('app.title') }}</a>
-  <div class="user-area">
-    @if (auth.isAuthenticated() && auth.user(); as user) {
-      <app-avatar [userId]="user.id" [name]="user.displayName" [size]="30" />
-      <span class="muted">{{ user.displayName }}</span>
-    }
+  <div class="brand-area">
     <button
       class="btn btn-quiet menu-button" type="button"
-      [attr.aria-label]="i18n.t('menu.open')" [attr.aria-expanded]="menuOpen()"
-      (click)="menuOpen.set(!menuOpen())"
+      [attr.aria-label]="i18n.t('menu.open')" [attr.aria-expanded]="drawerOpen()"
+      (click)="toggleDrawer()"
     >☰</button>
+    <a routerLink="/" class="brand">{{ i18n.t('app.title') }}</a>
+  </div>
+
+  <div class="user-area">
+    @if (auth.isAuthenticated() && auth.user(); as user) {
+      <button
+        class="profile-button" type="button"
+        [attr.aria-label]="i18n.t('menu.profile')" [attr.aria-expanded]="profileOpen()"
+        (click)="toggleProfile()"
+      >
+        <app-avatar [userId]="user.id" [name]="user.displayName" [size]="30" />
+        <span class="muted profile-name">{{ user.displayName }}</span>
+        <span class="caret" aria-hidden="true">▾</span>
+      </button>
+    } @else {
+      <a routerLink="/welcome" class="btn btn-quiet">{{ i18n.t('auth.signInAction') }}</a>
+    }
   </div>
 </header>
 
-@if (menuOpen()) {
-  <nav class="menu card" (click)="menuOpen.set(false)">
-    <a routerLink="/about" class="menu-item">{{ i18n.t('menu.about') }}</a>
-    <a routerLink="/privacy" class="menu-item">{{ i18n.t('menu.privacy') }}</a>
-    <a routerLink="/contact" class="menu-item">{{ i18n.t('menu.contact') }}</a>
-    <button class="menu-item" type="button" (click)="toggleLanguage()">{{ i18n.t('menu.language') }}</button>
-    @if (auth.isAuthenticated()) {
-      <label class="menu-item avatar-upload" (click)="$event.stopPropagation()">
+<!-- Sliding navigation drawer (from the start side) + dimmed backdrop. -->
+<div class="backdrop" [class.visible]="drawerOpen()" (click)="closeAll()" aria-hidden="true"></div>
+<nav class="drawer" [class.open]="drawerOpen()" [attr.aria-hidden]="!drawerOpen()">
+  <div class="drawer-head">
+    <span class="brand">{{ i18n.t('app.title') }}</span>
+    <button class="btn btn-quiet close-button" type="button" [attr.aria-label]="i18n.t('common.close')" (click)="closeAll()">✕</button>
+  </div>
+  <a routerLink="/" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.home') }}</a>
+  <a routerLink="/about" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.about') }}</a>
+  <a routerLink="/privacy" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.privacy') }}</a>
+  <a routerLink="/contact" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.contact') }}</a>
+  <hr class="menu-sep" />
+  <button class="menu-item" type="button" (click)="toggleLanguage()">{{ i18n.t('menu.language') }}</button>
+</nav>
+
+<!-- Profile menu under the avatar: settings + sign in / out. -->
+@if (profileOpen()) {
+  <div class="profile-menu card">
+    @if (auth.user(); as user) {
+      <div class="profile-head">
+        <app-avatar [userId]="user.id" [name]="user.displayName" [size]="40" />
+        <div class="profile-id">
+          <strong>{{ user.displayName }}</strong>
+          <span class="muted small">{{ user.email }}</span>
+        </div>
+      </div>
+      <hr class="menu-sep" />
+      <a routerLink="/profile" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.profile') }}</a>
+      <label class="menu-item avatar-upload">
         {{ avatarSaved() ? i18n.t('menu.avatarSaved') : i18n.t('menu.avatar') }}
         <input type="file" hidden accept="image/png,image/jpeg,image/webp" (change)="onAvatarPicked($event)" />
       </label>
+      <button class="menu-item" type="button" (click)="toggleLanguage()">{{ i18n.t('menu.language') }}</button>
       <button class="menu-item danger" type="button" (click)="signOut()">{{ i18n.t('menu.signOut') }}</button>
     }
-  </nav>
+  </div>
 }
 
-<main (click)="menuOpen.set(false)">
+<main (click)="closeAll()">
   <router-outlet />
 </main>

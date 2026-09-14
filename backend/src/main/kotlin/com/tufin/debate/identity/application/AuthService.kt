@@ -86,6 +86,16 @@ class AuthService(
 
     fun findMe(userId: String): User? = users.findById(userId).orElse(null)
 
+    /**
+     * Account-level profile edit. Room display names are deliberately untouched — they are
+     * per-room snapshots chosen at invitation/approval time (trust-model invariant).
+     */
+    fun updateProfile(userId: String, displayName: String): User {
+        val user = users.findById(userId).orElseThrow { UnauthorizedException("Please sign in again") }
+        user.displayName = displayName.trim()
+        return users.save(user)
+    }
+
     private fun issueTokens(user: User, familyId: String = Ids.newId()): TokenPair {
         val principal = AuthenticatedUser(user.id, user.email, user.displayName)
         val rawRefresh = newRefreshTokenValue()

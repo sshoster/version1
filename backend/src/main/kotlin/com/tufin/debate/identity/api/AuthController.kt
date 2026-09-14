@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -61,7 +62,12 @@ class AuthController(private val authService: AuthService) {
         authService.refresh(request.refreshToken).toResponse()
 }
 
+data class UpdateProfileRequest(
+    @field:NotBlank @field:Size(min = 1, max = 80) val displayName: String = "",
+)
+
 @RestController
+@Validated
 @RequestMapping("/api/v1/users")
 class UserController(private val authService: AuthService) {
 
@@ -69,5 +75,14 @@ class UserController(private val authService: AuthService) {
     fun me(@AuthenticationPrincipal user: AuthenticatedUser): UserResponse {
         val stored = authService.findMe(user.userId)
         return UserResponse(user.userId, stored?.email ?: user.email, stored?.displayName ?: user.displayName)
+    }
+
+    @PatchMapping("/me")
+    fun updateMe(
+        @RequestBody @jakarta.validation.Valid request: UpdateProfileRequest,
+        @AuthenticationPrincipal user: AuthenticatedUser,
+    ): UserResponse {
+        val updated = authService.updateProfile(user.userId, request.displayName)
+        return UserResponse(updated.id, updated.email, updated.displayName)
     }
 }

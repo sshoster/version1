@@ -17,8 +17,24 @@ export class App {
   private readonly avatars = inject(AvatarService);
   private readonly router = inject(Router);
 
-  protected readonly menuOpen = signal(false);
+  protected readonly drawerOpen = signal(false);
+  protected readonly profileOpen = signal(false);
   protected readonly avatarSaved = signal(false);
+
+  protected toggleDrawer(): void {
+    this.profileOpen.set(false);
+    this.drawerOpen.set(!this.drawerOpen());
+  }
+
+  protected toggleProfile(): void {
+    this.drawerOpen.set(false);
+    this.profileOpen.set(!this.profileOpen());
+  }
+
+  protected closeAll(): void {
+    this.drawerOpen.set(false);
+    this.profileOpen.set(false);
+  }
 
   protected onAvatarPicked(event: Event): void {
     const inputElement = event.target as HTMLInputElement;
@@ -32,7 +48,7 @@ export class App {
         this.avatarSaved.set(true);
         setTimeout(() => {
           this.avatarSaved.set(false);
-          this.menuOpen.set(false);
+          this.profileOpen.set(false);
         }, 1500);
         // Reload so every avatar instance refetches.
         location.reload();
@@ -45,6 +61,7 @@ export class App {
   }
 
   protected signOut(): void {
+    this.closeAll();
     this.auth.logout();
     void this.router.navigate(['/welcome']);
   }
