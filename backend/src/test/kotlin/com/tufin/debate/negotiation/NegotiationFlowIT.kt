@@ -101,6 +101,7 @@ class NegotiationFlowIT : IntegrationTestBase() {
         assertEquals("WAITING_FOR_USER", json(get("/api/v1/rooms/${room.roomId}", room.alice.accessToken))["status"].asText())
         val openQuestions = waiting["myOpenQuestions"]
         assertEquals(1, openQuestions.size(), "the initiator's assistant asked one question")
+        assertTrue(openQuestions[0]["options"].size() >= 2, "the question carries one-tap answer suggestions")
 
         // Bob has no open questions — the question is private to Alice.
         val bobRun = json(get("/api/v1/rooms/${room.roomId}/negotiation-runs/$runId", room.bob.accessToken))

@@ -68,6 +68,30 @@ class AdminDashboardIT : IntegrationTestBase() {
     }
 
     @Test
+    fun `golden rules are super-admin only, default until edited, and versioned`() {
+        val outsider = registerUser("Nosy")
+        assertEquals(404, get("/api/v1/admin/golden-rules", outsider.accessToken).statusCode.value())
+
+        val admin = adminToken()
+        val initial = json(get("/api/v1/admin/golden-rules", admin))
+        assertTrue(initial["text"].asText().contains("GOLDEN RULES"), "defaults are seeded")
+
+        val updated = json(
+            rest.exchange(
+                "/api/v1/admin/golden-rules", org.springframework.http.HttpMethod.PUT,
+                org.springframework.http.HttpEntity(
+                    objectMapper.writeValueAsString(mapOf("text" to "Rule 1: always be kind.")),
+                    jsonHeaders(admin),
+                ),
+                String::class.java,
+            ),
+        )
+        assertEquals("Rule 1: always be kind.", updated["text"].asText())
+        assertEquals(false, updated["isDefault"].asBoolean())
+        assertTrue(updated["version"].asInt() >= 1)
+    }
+
+    @Test
     fun `deleting a room purges it for its members`() {
         val alice = registerUser("Alice")
         val roomId = json(post("/api/v1/rooms", mapOf("title" to "Doomed room"), alice.accessToken))["id"].asText()

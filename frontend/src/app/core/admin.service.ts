@@ -37,6 +37,19 @@ export class AdminService {
     return this.http.delete<void>(`/api/v1/admin/users/${userId}`);
   }
 
+  goldenRules(): Observable<{ text: string; updatedAt: string | null; version: number; isDefault: boolean }> {
+    return this.http.get<{ text: string; updatedAt: string | null; version: number; isDefault: boolean }>(
+      '/api/v1/admin/golden-rules',
+    );
+  }
+
+  saveGoldenRules(text: string): Observable<{ text: string; updatedAt: string | null; version: number; isDefault: boolean }> {
+    return this.http.put<{ text: string; updatedAt: string | null; version: number; isDefault: boolean }>(
+      '/api/v1/admin/golden-rules',
+      { text },
+    );
+  }
+
   rooms(): Observable<AdminRoomView[]> {
     return this.http.get<AdminRoomView[]>('/api/v1/admin/rooms');
   }

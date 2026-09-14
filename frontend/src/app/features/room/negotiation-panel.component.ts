@@ -27,6 +27,16 @@ import { ProposalContent } from '../../core/proposals.service';
                   <strong>{{ i18n.t('nego.questionForYou') }}</strong>
                   @for (question of r.myOpenQuestions; track question.id) {
                     <p class="q-text">{{ question.text }}</p>
+                    @if (question.options.length > 0) {
+                      <div class="option-row">
+                        @for (option of question.options; track option) {
+                          <button
+                            class="option-chip" type="button" [class.picked]="answers[question.id] === option"
+                            (click)="answers[question.id] = option"
+                          >{{ option }}</button>
+                        }
+                      </div>
+                    }
                     <div class="answer-row">
                       <input
                         type="text" name="answer-{{ question.id }}"
@@ -146,6 +156,14 @@ import { ProposalContent } from '../../core/proposals.service';
     }
     .q-text { margin: 0; font-weight: 600; }
     .answer-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+    .option-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+    .option-chip {
+      border: 1px solid var(--color-primary); background: var(--color-surface);
+      color: var(--color-primary); border-radius: 999px; padding: 6px 14px;
+      font-size: 0.85rem; cursor: pointer; min-block-size: 34px;
+    }
+    .option-chip:hover { background: var(--color-primary-soft, #e3efe9); }
+    .option-chip.picked { background: var(--color-primary); color: #fff; }
     .answer-row input { flex: 1; min-width: 200px; }
     .proposal-card {
       background: var(--color-primary-soft); border-radius: var(--radius); padding: var(--space-3);

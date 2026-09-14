@@ -23,6 +23,13 @@ export class OutcomesService {
     return this.http.post<OutcomeView>(`/api/v1/rooms/${roomId}/outcomes/agreement-draft`, {});
   }
 
+  /** Emails the latest draft as an attached document; null recipients = all active participants. */
+  emailDraft(roomId: string, recipientUserIds: string[] | null): Observable<{ sent: number }> {
+    return this.http.post<{ sent: number }>(`/api/v1/rooms/${roomId}/outcomes/agreement-draft/email`, {
+      recipientUserIds,
+    });
+  }
+
   pauseRoom(roomId: string): Observable<unknown> {
     return this.http.post(`/api/v1/rooms/${roomId}/pause`, {});
   }

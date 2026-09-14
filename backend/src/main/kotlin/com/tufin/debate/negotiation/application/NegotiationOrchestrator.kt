@@ -289,7 +289,7 @@ class NegotiationOrchestrator(
             partyDisplayName = participant.displayName,
             publicMessage = output.publicMessage?.trim()?.takeIf { it.isNotEmpty() },
             proposal = output.proposal,
-            questionsForOwnUser = output.questionsForOwnUser,
+            questionsForOwnUser = output.questionsForOwnUser.map { it.text },
             questionsForOtherParty = output.questionsForOtherParty,
             sharedFactsUsed = output.sharedFactsUsed,
             privateDataReferencedInternally = output.privateDataReferencedInternally,
@@ -304,14 +304,15 @@ class NegotiationOrchestrator(
             createdAt = Instant.now(),
         )
 
-        val newQuestions = output.questionsForOwnUser.map { text ->
+        val newQuestions = output.questionsForOwnUser.map { question ->
             Question(
                 id = Ids.newId(),
                 roomId = roomId,
                 runId = run.id,
                 turnId = turn.id,
                 toUserId = partyUserId,
-                text = text,
+                text = question.text,
+                suggestedOptions = question.options.take(4),
                 createdAt = Instant.now(),
             )
         }

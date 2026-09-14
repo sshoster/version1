@@ -88,6 +88,22 @@ import { AdminRoomView, AdminUserView } from '../../core/models';
       </div>
 
       <div class="card stack">
+        <h2>✨ {{ i18n.t('admin.goldenTitle') }}</h2>
+        <p class="muted small">{{ i18n.t('admin.goldenHint') }}</p>
+        <textarea rows="9" name="goldenRules" dir="auto" [(ngModel)]="rulesText"></textarea>
+        <div class="actions">
+          <button class="btn btn-primary" type="button" [disabled]="busy() || !rulesText.trim()" (click)="saveRules()">
+            {{ rulesSaved() ? i18n.t('account.saved') : i18n.t('admin.goldenSave') }}
+          </button>
+          @if (rulesMeta(); as meta) {
+            <span class="muted small">
+              {{ meta.isDefault ? i18n.t('admin.goldenDefault') : i18n.t('admin.goldenVersion', meta.version) }}
+            </span>
+          }
+        </div>
+      </div>
+
+      <div class="card stack">
         <h2>{{ i18n.t('admin.rooms') }}</h2>
         <div class="table-wrap">
           <table>
@@ -177,6 +193,13 @@ export class AdminPage {
   ngOnInit(): void {
     this.loadUsers();
     this.loadRooms();
+    this.admin.goldenRules().subscribe({
+      next: (rules) => {
+        this.rulesText = rules.text;
+        this.rulesMeta.set({ version: rules.version, isDefault: rules.isDefault });
+      },
+      error: () => undefined,
+    });
   }
 
   protected loadUsers(): void {
@@ -226,6 +249,28 @@ export class AdminPage {
   }
 
   protected readonly copied = signal<string | null>(null);
+  protected readonly rulesSaved = signal(false);
+  protected readonly rulesMeta = signal<{ version: number; isDefault: boolean } | null>(null);
+  protected rulesText = '';
+
+  protected saveRules(): void {
+    if (this.busy() || !this.rulesText.trim()) return;
+    this.busy.set(true);
+    this.error.set(null);
+    this.admin.saveGoldenRules(this.rulesText.trim()).subscribe({
+      next: (rules) => {
+        this.busy.set(false);
+        this.rulesText = rules.text;
+        this.rulesMeta.set({ version: rules.version, isDefault: rules.isDefault });
+        this.rulesSaved.set(true);
+        setTimeout(() => this.rulesSaved.set(false), 2000);
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.busy.set(false);
+        this.error.set(err?.error?.message ?? this.i18n.t('auth.genericError'));
+      },
+    });
+  }
 
   protected copyCode(room: AdminRoomView): void {
     if (!room.joinCode) return;

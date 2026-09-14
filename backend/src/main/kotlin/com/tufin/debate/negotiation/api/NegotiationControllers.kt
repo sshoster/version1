@@ -71,6 +71,7 @@ data class RunView(
 data class QuestionView(
     val id: String,
     val text: String,
+    val options: List<String>,
     val status: QuestionStatus,
     val createdAt: Instant,
 )
@@ -159,7 +160,7 @@ class NegotiationController(
     ): List<QuestionView> {
         permissions.requireRole(roomId, user.userId, ParticipantRole.PARTY, ParticipantRole.OWNER)
         return questions.findByRoomIdAndToUserIdOrderByCreatedAtDesc(roomId, user.userId)
-            .map { QuestionView(it.id, it.text, it.status, it.createdAt) }
+            .map { QuestionView(it.id, it.text, it.suggestedOptions, it.status, it.createdAt) }
     }
 
     @PostMapping("/api/v1/rooms/{roomId}/questions/{questionId}/answer")
@@ -181,7 +182,7 @@ class NegotiationController(
             )
         }
         val open = questions.findByRunIdAndToUserIdAndStatus(runId, user.userId, QuestionStatus.OPEN)
-            .map { QuestionView(it.id, it.text, it.status, it.createdAt) }
+            .map { QuestionView(it.id, it.text, it.suggestedOptions, it.status, it.createdAt) }
         val pendingAnswerUserIds = questions.findByRunIdAndStatusOrderByCreatedAtAsc(runId, QuestionStatus.OPEN)
             .map { it.toUserId }
             .distinct()

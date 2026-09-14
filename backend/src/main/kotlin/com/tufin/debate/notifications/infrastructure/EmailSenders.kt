@@ -1,5 +1,6 @@
 package com.tufin.debate.notifications.infrastructure
 
+import com.tufin.debate.notifications.application.EmailAttachment
 import com.tufin.debate.notifications.application.EmailSender
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -41,13 +42,16 @@ class SmtpEmailSender(
         require(from.isNotBlank()) { "app.mail.from (MAIL_FROM or SMTP_USERNAME) is required when mail is enabled" }
     }
 
-    override fun send(to: String, subject: String, htmlBody: String, textBody: String) {
+    override fun send(to: String, subject: String, htmlBody: String, textBody: String, attachment: EmailAttachment?) {
         val message = mailSender.createMimeMessage()
         val helper = MimeMessageHelper(message, true, "UTF-8")
         helper.setFrom(from)
         helper.setTo(to)
         helper.setSubject(subject)
         helper.setText(textBody, htmlBody)
+        attachment?.let {
+            helper.addAttachment(it.filename, org.springframework.core.io.ByteArrayResource(it.bytes), it.contentType)
+        }
         mailSender.send(message)
     }
 }
@@ -78,19 +82,23 @@ class BrevoEmailSender(
         )
         .build()
 
-    override fun send(to: String, subject: String, htmlBody: String, textBody: String) {
+    override fun send(to: String, subject: String, htmlBody: String, textBody: String, attachment: EmailAttachment?) {
+        val payload = mutableMapOf<String, Any>(
+            "sender" to mapOf("email" to from, "name" to "Bridge AI"),
+            "to" to listOf(mapOf("email" to to)),
+            "subject" to subject,
+            "htmlContent" to htmlBody,
+            "textContent" to textBody,
+        )
+        attachment?.let {
+            payload["attachment"] = listOf(
+                mapOf("name" to it.filename, "content" to java.util.Base64.getEncoder().encodeToString(it.bytes)),
+            )
+        }
         client.post()
             .uri("/v3/smtp/email")
             .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-            .body(
-                mapOf(
-                    "sender" to mapOf("email" to from, "name" to "Bridge AI"),
-                    "to" to listOf(mapOf("email" to to)),
-                    "subject" to subject,
-                    "htmlContent" to htmlBody,
-                    "textContent" to textBody,
-                ),
-            )
+            .body(payload)
             .retrieve()
             .toBodilessEntity()
     }
@@ -100,8 +108,11 @@ class BrevoEmailSender(
 class LoggingEmailSender : EmailSender {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    override fun send(to: String, subject: String, htmlBody: String, textBody: String) {
-        log.info("Email sending is disabled (app.mail.enabled=false); would have sent \"{}\" to {}", subject, mask(to))
+    override fun send(to: String, subject: String, htmlBody: String, textBody: String, attachment: EmailAttachment?) {
+        log.info(
+            "Email sending is disabled (app.mail.enabled=false); would have sent \"{}\" to {}{}",
+            subject, mask(to), if (attachment != null) " with attachment ${attachment.filename}" else "",
+        )
     }
 
     private fun mask(email: String): String {

@@ -15,6 +15,9 @@ import com.tufin.debate.audit.application.AuditService
 import com.tufin.debate.audit.domain.ActorType
 import com.tufin.debate.discussion.application.RoomDirectory
 import com.tufin.debate.identity.application.AuthenticatedUser
+import com.tufin.debate.identity.application.UserDirectory
+import com.tufin.debate.notifications.application.EmailAttachment
+import com.tufin.debate.notifications.application.EmailSender
 import com.tufin.debate.llm.application.LlmProvider
 import com.tufin.debate.llm.application.LlmRequest
 import com.tufin.debate.messaging.application.SharedContextReader
@@ -50,6 +53,8 @@ class OutcomeService(
     private val llmProvider: LlmProvider,
     private val auditService: AuditService,
     private val outboxService: OutboxService,
+    private val emailSender: EmailSender,
+    private val userDirectory: UserDirectory,
 ) {
     companion object {
         const val SUMMARY_TEMPLATE = "summary/v1"
@@ -247,6 +252,62 @@ class OutcomeService(
             mapOf("resourceId" to artifact.id, "resourceVersion" to nextVersion, "actorUserId" to actor.userId),
         )
         return artifact
+    }
+
+    /**
+     * Emails the latest agreement draft as an attached document to all active participants or a
+     * selected subset. Recipient ids are always intersected with the room's active participants —
+     * a room document can never be mailed outside the room. Returns how many emails were sent.
+     */
+    fun emailAgreementDraft(roomId: String, actor: AuthenticatedUser, recipientUserIds: List<String>?): Int {
+        requireParty(roomId, actor)
+        val draft = outcomes.findTopByRoomIdAndTypeOrderByVersionDesc(roomId, OutcomeType.AGREEMENT_DRAFT)
+            ?: throw ConflictException("Generate the agreement draft first")
+        val room = rooms.find(roomId) ?: throw NotFoundException("This discussion was not found")
+
+        val members = directory.activeParticipants(roomId)
+        val targets = if (recipientUserIds.isNullOrEmpty()) {
+            members
+        } else {
+            members.filter { it.userId in recipientUserIds }
+        }
+        if (targets.isEmpty()) throw ConflictException("No recipients selected")
+        val emails = userDirectory.emailsByIds(targets.map { it.userId })
+
+        val subject = "Bridge AI · טיוטת הסכם — ${room.title}"
+        val fileBase = "agreement-draft-v${draft.version}"
+        val attachment = EmailAttachment(
+            filename = "$fileBase.txt",
+            contentType = "text/plain; charset=UTF-8",
+            bytes = (draft.text ?: "").toByteArray(Charsets.UTF_8),
+        )
+        val textBody = """
+            |שלום,
+            |מצורפת טיוטת ההסכם (גרסה ${draft.version}) מהדיון "${room.title}" ב-Bridge AI.
+            |שימו לב: זוהי טיוטה שנוצרה בסיוע AI ואינה ייעוץ משפטי.
+            |
+            |Hello,
+            |Attached is the agreement draft (version ${draft.version}) from the "${room.title}" discussion on Bridge AI.
+            |Note: this is an AI-assisted draft and not legal advice.
+        """.trimMargin()
+        val htmlBody = textBody.replace("\n", "<br/>")
+
+        var sent = 0
+        targets.forEach { participant ->
+            val email = emails[participant.userId] ?: return@forEach
+            try {
+                emailSender.send(email, subject, htmlBody, textBody, attachment)
+                sent++
+            } catch (e: Exception) {
+                // Best-effort per recipient: one bad mailbox must not block the rest.
+            }
+        }
+        auditService.append(
+            roomId, ActorType.USER, actor.userId,
+            "AGREEMENT_DRAFT_EMAILED", "OutcomeArtifact", draft.id,
+            metadata = mapOf("version" to draft.version.toString(), "recipients" to sent.toString()),
+        )
+        return sent
     }
 
     private fun requireParty(roomId: String, actor: AuthenticatedUser) {

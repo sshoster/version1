@@ -217,6 +217,8 @@ export interface NegotiationTurnView {
 export interface QuestionView {
   id: string;
   text: string;
+  /** One-tap answer suggestions offered by the assistant. */
+  options: string[];
   status: 'OPEN' | 'ANSWERED';
   createdAt: string;
 }

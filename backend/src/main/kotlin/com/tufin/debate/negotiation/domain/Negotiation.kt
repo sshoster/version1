@@ -118,6 +118,8 @@ class Question(
     val turnId: String,
     val toUserId: String,
     val text: String,
+    /** One-tap answer suggestions offered by the assistant alongside the question. */
+    val suggestedOptions: List<String> = emptyList(),
     var status: QuestionStatus = QuestionStatus.OPEN,
     /** Encrypted at rest (private to the asked user and their assistant). */
     var answerText: String? = null,

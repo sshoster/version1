@@ -68,7 +68,12 @@ class FakeLlmProvider : LlmProvider {
             context.contains("SCENARIO:MISSING_INFO") && !answeredQuestions && context.contains("CURRENT_TURN: 1") -> mapOf(
                 "publicMessage" to null,
                 "proposal" to null,
-                "questionsForOwnUser" to listOf("מה הסכום המקסימלי שנוח לך להציע?"),
+                "questionsForOwnUser" to listOf(
+                    mapOf(
+                        "text" to "מה הסכום המקסימלי שנוח לך להציע?",
+                        "options" to listOf("עד 3,000 ₪", "עד 3,500 ₪", "גמיש, תלוי בתנאים"),
+                    ),
+                ),
                 "stopReason" to "MISSING_INFO",
             )
 

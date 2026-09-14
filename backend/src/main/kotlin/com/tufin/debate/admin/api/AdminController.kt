@@ -5,7 +5,10 @@ import com.tufin.debate.admin.application.RoomPurgeService
 import com.tufin.debate.identity.application.AdminUserView
 import com.tufin.debate.identity.application.AuthenticatedUser
 import com.tufin.debate.identity.application.UserAdminService
+import com.tufin.debate.llm.application.GoldenRulesService
+import com.tufin.debate.llm.application.GoldenRulesView
 import com.tufin.debate.shared.errors.NotFoundException
+import org.springframework.web.bind.annotation.PutMapping
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
@@ -31,6 +34,10 @@ data class AdminCreateUserRequest(
     val password: String = "",
 )
 
+data class GoldenRulesRequest(
+    @field:NotBlank @field:Size(max = 8000) val text: String = "",
+)
+
 data class AdminUpdateUserRequest(
     @field:Size(max = 80) val displayName: String? = null,
     @field:Size(min = 5, max = 200, message = "Password must be at least 5 characters")
@@ -47,6 +54,7 @@ data class AdminUpdateUserRequest(
 class AdminController(
     private val userAdmin: UserAdminService,
     private val roomPurge: RoomPurgeService,
+    private val goldenRules: GoldenRulesService,
 ) {
 
     private fun gate(user: AuthenticatedUser) {
@@ -98,6 +106,22 @@ class AdminController(
     fun deleteUser(@PathVariable userId: String, @AuthenticationPrincipal user: AuthenticatedUser) {
         gate(user)
         userAdmin.delete(userId, user.userId)
+    }
+
+    /** Platform-wide assistant golden rules — read/write is super-admin only by design. */
+    @GetMapping("/golden-rules")
+    fun getGoldenRules(@AuthenticationPrincipal user: AuthenticatedUser): GoldenRulesView {
+        gate(user)
+        return goldenRules.get()
+    }
+
+    @PutMapping("/golden-rules")
+    fun putGoldenRules(
+        @RequestBody @Valid request: GoldenRulesRequest,
+        @AuthenticationPrincipal user: AuthenticatedUser,
+    ): GoldenRulesView {
+        gate(user)
+        return goldenRules.update(request.text, user.userId)
     }
 
     @GetMapping("/rooms")

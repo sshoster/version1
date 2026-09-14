@@ -1,8 +1,10 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { I18nService } from '../../core/i18n.service';
-import { OutcomeType, OutcomeView, RoomResponse } from '../../core/models';
+import { MessagingService } from '../../core/messaging.service';
+import { OutcomeType, OutcomeView, ParticipantResponse, RoomResponse } from '../../core/models';
 import { OutcomesService } from '../../core/outcomes.service';
 import { RoomsService } from '../../core/rooms.service';
 
@@ -12,7 +14,7 @@ import { RoomsService } from '../../core/rooms.service';
  */
 @Component({
   selector: 'app-result-page',
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink, DatePipe, FormsModule],
   template: `
     <div class="page stack">
       <div class="top-row">
@@ -22,10 +24,6 @@ import { RoomsService } from '../../core/rooms.service';
       @if (room(); as r) {
         <p class="muted">{{ r.title }} — {{ i18n.t('status.' + r.status) }}</p>
       }
-      @if (error()) {
-        <div class="error-box" role="alert">{{ error() }}</div>
-      }
-
       <!-- 1. AI discussion summary -->
       <section class="card stack">
         <div class="sec-head">
@@ -45,8 +43,14 @@ import { RoomsService } from '../../core/rooms.service';
             </button>
             @if (summary()) {
               <button class="btn btn-secondary" type="button" (click)="print(summary()!)">{{ i18n.t('outcomes.print') }}</button>
+              <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="shareToChat(summary()!)">
+                {{ sharedType() === 'DISCUSSION_SUMMARY' ? i18n.t('outcomes.sharedToChat') : '💬 ' + i18n.t('outcomes.shareToChat') }}
+              </button>
             }
           </div>
+          @if (errorAt() === 'DISCUSSION_SUMMARY' && error()) {
+            <div class="error-box" role="alert">{{ error() }}</div>
+          }
         }
       </section>
 
@@ -86,8 +90,14 @@ import { RoomsService } from '../../core/rooms.service';
             </button>
             @if (understandings()) {
               <button class="btn btn-secondary" type="button" (click)="print(understandings()!)">{{ i18n.t('outcomes.print') }}</button>
+              <button class="btn btn-secondary" type="button" [disabled]="busy()" (click)="shareToChat(understandings()!)">
+                {{ sharedType() === 'APPROVED_UNDERSTANDINGS' ? i18n.t('outcomes.sharedToChat') : '💬 ' + i18n.t('outcomes.shareToChat') }}
+              </button>
             }
           </div>
+          @if (errorAt() === 'APPROVED_UNDERSTANDINGS' && error()) {
+            <div class="error-box" role="alert">{{ error() }}</div>
+          }
         }
       </section>
 
@@ -110,8 +120,38 @@ import { RoomsService } from '../../core/rooms.service';
             </button>
             @if (draft()) {
               <button class="btn btn-secondary" type="button" (click)="print(draft()!)">{{ i18n.t('outcomes.print') }}</button>
+              <button class="btn btn-secondary" type="button" (click)="emailOpen.set(!emailOpen())">
+                📧 {{ i18n.t('outcomes.emailDraft') }}
+              </button>
             }
           </div>
+          @if (errorAt() === 'AGREEMENT_DRAFT' && error()) {
+            <div class="error-box" role="alert">{{ error() }}</div>
+          }
+          @if (emailOpen() && draft()) {
+            <div class="email-box stack">
+              <strong>{{ i18n.t('outcomes.emailWho') }}</strong>
+              @for (participant of participants(); track participant.id) {
+                <label class="recipient-option">
+                  <input type="checkbox" [checked]="emailSelected().has(participant.userId)" (change)="toggleRecipient(participant.userId)" />
+                  {{ participant.displayName }}
+                </label>
+              }
+              <p class="muted small">{{ i18n.t('outcomes.emailNote') }}</p>
+              <div class="actions">
+                <button class="btn btn-primary" type="button" [disabled]="busy() || emailSelected().size === 0" (click)="sendEmail()">
+                  {{ i18n.t('outcomes.emailSendBtn') }}
+                </button>
+                <button class="btn btn-quiet" type="button" (click)="emailOpen.set(false)">{{ i18n.t('common.close') }}</button>
+              </div>
+              @if (errorAt() === 'EMAIL' && error()) {
+                <div class="error-box" role="alert">{{ error() }}</div>
+              }
+              @if (emailResult(); as sent) {
+                <p class="sent-line">✅ {{ i18n.t('outcomes.emailSent', sent) }}</p>
+              }
+            </div>
+          }
         }
       </section>
     </div>
@@ -132,12 +172,16 @@ import { RoomsService } from '../../core/rooms.service';
     .und-block ol { margin: var(--space-2) 0; padding-inline-start: var(--space-4); }
     .approval-line { margin: 2px 0; color: #1d6e3a; }
     .actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+    .email-box { background: var(--color-bg); border-radius: var(--radius); padding: var(--space-3); }
+    .recipient-option { display: flex; gap: var(--space-2); align-items: center; min-height: 32px; }
+    .sent-line { margin: 0; color: #1d6e3a; font-weight: 600; }
   `,
 })
 export class ResultPage {
   protected readonly i18n = inject(I18nService);
   private readonly outcomes = inject(OutcomesService);
   private readonly rooms = inject(RoomsService);
+  private readonly messaging = inject(MessagingService);
 
   readonly roomId = input.required<string>();
 
@@ -145,6 +189,13 @@ export class ResultPage {
   protected readonly artifacts = signal<OutcomeView[]>([]);
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** Which section the error belongs to — rendered next to the button that caused it. */
+  protected readonly errorAt = signal<OutcomeType | 'EMAIL' | null>(null);
+  protected readonly participants = signal<ParticipantResponse[]>([]);
+  protected readonly sharedType = signal<OutcomeType | null>(null);
+  protected readonly emailOpen = signal(false);
+  protected readonly emailSelected = signal<Set<string>>(new Set());
+  protected readonly emailResult = signal<number | null>(null);
 
   protected readonly summary = computed(() => this.artifacts().find((a) => a.type === 'DISCUSSION_SUMMARY') ?? null);
   protected readonly understandings = computed(() => this.artifacts().find((a) => a.type === 'APPROVED_UNDERSTANDINGS') ?? null);
@@ -159,8 +210,93 @@ export class ResultPage {
     effect(() => {
       const id = this.roomId();
       this.rooms.get(id).subscribe({ next: (room) => this.room.set(room) });
+      this.rooms.participants(id).subscribe({
+        next: (participants) => {
+          this.participants.set(participants);
+          // Everyone selected by default — untick to narrow.
+          this.emailSelected.set(new Set(participants.map((participant) => participant.userId)));
+        },
+        error: () => undefined,
+      });
       this.refresh(id);
     });
+  }
+
+  /** Publishes the document into the shared conversation (visible to all room participants). */
+  protected shareToChat(artifact: OutcomeView): void {
+    if (this.busy()) return;
+    if (!confirm(this.i18n.t('outcomes.confirmShare'))) return;
+    const body = {
+      text: this.documentAsText(artifact).slice(0, 8000),
+      scope: 'ALL_ROOM_PARTICIPANTS' as const,
+      origin: 'USER_AUTHORED' as const,
+    };
+    this.busy.set(true);
+    this.clearError();
+    this.messaging.sharePreview(this.roomId(), body).subscribe({
+      next: (preview) =>
+        this.messaging.publish(this.roomId(), preview.previewId, body).subscribe({
+          next: () => {
+            this.busy.set(false);
+            this.sharedType.set(artifact.type);
+            setTimeout(() => this.sharedType.set(null), 2500);
+          },
+          error: (err: { error?: { message?: string } }) => this.fail(err, artifact.type),
+        }),
+      error: (err: { error?: { message?: string } }) => this.fail(err, artifact.type),
+    });
+  }
+
+  protected toggleRecipient(userId: string): void {
+    this.emailSelected.update((current) => {
+      const next = new Set(current);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  }
+
+  protected sendEmail(): void {
+    if (this.busy()) return;
+    this.busy.set(true);
+    this.clearError();
+    this.emailResult.set(null);
+    const all = this.emailSelected().size === this.participants().length;
+    this.outcomes.emailDraft(this.roomId(), all ? null : [...this.emailSelected()]).subscribe({
+      next: ({ sent }) => {
+        this.busy.set(false);
+        this.emailResult.set(sent);
+      },
+      error: (err: { error?: { message?: string } }) => this.fail(err, 'EMAIL'),
+    });
+  }
+
+  private clearError(): void {
+    this.error.set(null);
+    this.errorAt.set(null);
+  }
+
+  private fail(err: { error?: { message?: string } }, at: OutcomeType | 'EMAIL'): void {
+    this.busy.set(false);
+    this.error.set(err?.error?.message ?? this.i18n.t('auth.genericError'));
+    this.errorAt.set(at);
+  }
+
+  /** Flattens an artifact (free text or understanding blocks) into shareable plain text. */
+  private documentAsText(artifact: OutcomeView): string {
+    const titleKey = artifact.type === 'DISCUSSION_SUMMARY' ? 'outcomes.summary.title' : 'outcomes.und.title';
+    const header = `📋 ${this.i18n.t(titleKey)} (v${artifact.version})`;
+    if (artifact.text) return `${header}\n\n${artifact.text}`;
+    const blocks = (artifact.understandings ?? [])
+      .map((block) => {
+        const terms = block.terms.map((term, index) => `${index + 1}. ${term}`).join('\n');
+        const approvals = block.approvals
+          .map((approval) => `✔ ${this.i18n.t('outcomes.und.approvedBy', approval.displayName, this.format(approval.approvedAt), approval.proposalVersion)}`)
+          .join('\n');
+        return `${block.title}\n${terms}\n${approvals}`;
+      })
+      .join('\n\n');
+    return `${header}\n\n${blocks}`;
   }
 
   private refresh(id: string): void {
@@ -173,7 +309,7 @@ export class ResultPage {
   protected generate(type: OutcomeType): void {
     if (this.busy()) return;
     this.busy.set(true);
-    this.error.set(null);
+    this.clearError();
     const call =
       type === 'DISCUSSION_SUMMARY'
         ? this.outcomes.generateSummary(this.roomId())
@@ -188,6 +324,7 @@ export class ResultPage {
       error: (err: { status?: number; error?: { message?: string } }) => {
         this.busy.set(false);
         this.error.set(err?.status === 409 ? this.i18n.t('outcomes.needAgreement') : (err?.error?.message ?? this.i18n.t('auth.genericError')));
+        this.errorAt.set(type);
       },
     });
   }
