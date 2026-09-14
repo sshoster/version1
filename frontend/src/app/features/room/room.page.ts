@@ -173,13 +173,6 @@ import { TimelineComponent } from './timeline.component';
       .end-col { order: 1; width: 250px; flex-shrink: 0; }
       .side-column { position: sticky; top: var(--space-3); max-height: calc(100vh - 24px); overflow-y: auto; }
     }
-    /* The room-details card stays pinned while the conversation scrolls. */
-    .head {
-      position: sticky;
-      inset-block-start: var(--space-2);
-      z-index: 20;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
-    }
     .head h1 { margin-block-end: var(--space-1); }
     .head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
     .head-row h1 { margin: 0; }

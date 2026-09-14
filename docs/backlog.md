@@ -93,7 +93,7 @@ doc §14.
 - [x] Public hosting package: single-container image (backend serves the SPA), `render.yaml` blueprint, deployment guide — live at https://bridge-ai-fuev.onrender.com (Render + MongoDB Atlas + Cloudflare R2).
 - [x] Join by code: per-room join code (copy chip in the header), join requests with admin approval + role choice; grantable admin (OWNER) role — creator undemotable, no self-edit.
 - [x] Per-room unread badges on the home page: member-wide notifications for room activity (actor excluded), live pings over `/user/queue/notifications`, cleared when room content renders; unread rooms sort first.
-- [x] App shell redesign: sliding nav drawer beside the title, avatar profile dropdown, `/profile` page (photo + account display name via `PATCH /users/me`), sticky room header, mobile participant avatar strip, compact files list.
+- [x] App shell redesign: sliding nav drawer beside the title, avatar profile dropdown, `/profile` page (photo + account display name via `PATCH /users/me`), mobile participant avatar strip, compact files list.
 - [x] Sign in with Google (GIS ID-token flow, server-side audience verification, accounts matched by verified email); refresh-token TTL raised to 30 days for persistent sessions.
 
 ## Candidate next steps

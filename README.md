@@ -48,8 +48,8 @@ Live deployment: https://bridge-ai-fuev.onrender.com
   counts that update live over WebSocket and clear only once the room's content has actually
   rendered; unread rooms float to the top.
 - **App shell**: sliding navigation drawer next to the Bridge AI title, avatar profile menu,
-  account profile page (photo + display name; room names stay per-room snapshots), sticky
-  room-details header, compact mobile participant strip.
+  account profile page (photo + display name; room names stay per-room snapshots), compact
+  mobile participant strip.
 - **Sign in with Google** (optional): one-click registration/login via Google Identity Services;
   the server verifies the ID token (signature + audience) and matches accounts by verified email.
 - **Platform**: JWT auth with rotating refresh tokens (sessions persist ~30 days of inactivity
