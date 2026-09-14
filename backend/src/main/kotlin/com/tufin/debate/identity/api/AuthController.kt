@@ -3,6 +3,7 @@ package com.tufin.debate.identity.api
 import com.tufin.debate.identity.application.AuthService
 import com.tufin.debate.identity.application.AuthenticatedUser
 import com.tufin.debate.identity.application.TokenPair
+import com.tufin.debate.identity.application.UserAdminService
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -40,7 +41,13 @@ data class GoogleLoginRequest(
 /** Public, non-secret configuration the SPA needs before anyone is signed in. */
 data class AuthConfigResponse(val googleClientId: String)
 
-data class UserResponse(val id: String, val email: String, val displayName: String)
+data class UserResponse(
+    val id: String,
+    val email: String,
+    val displayName: String,
+    /** True only for env-allowlisted super admins; populated on /users/me. */
+    val superAdmin: Boolean = false,
+)
 
 data class AuthResponse(val accessToken: String, val refreshToken: String, val user: UserResponse)
 
@@ -93,12 +100,19 @@ data class ChangePasswordRequest(
 @RestController
 @Validated
 @RequestMapping("/api/v1/users")
-class UserController(private val authService: AuthService) {
+class UserController(
+    private val authService: AuthService,
+    private val userAdminService: UserAdminService,
+) {
 
     @GetMapping("/me")
     fun me(@AuthenticationPrincipal user: AuthenticatedUser): UserResponse {
         val stored = authService.findMe(user.userId)
-        return UserResponse(user.userId, stored?.email ?: user.email, stored?.displayName ?: user.displayName)
+        val email = stored?.email ?: user.email
+        return UserResponse(
+            user.userId, email, stored?.displayName ?: user.displayName,
+            superAdmin = userAdminService.isSuperAdmin(email),
+        )
     }
 
     @PostMapping("/me/password")

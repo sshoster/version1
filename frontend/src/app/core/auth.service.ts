@@ -46,6 +46,17 @@ export class AuthService {
       .pipe(tap((response) => this.store(response)));
   }
 
+  /** Refreshes the stored user from the server (picks up the superAdmin flag, renames, etc.). */
+  loadMe(): void {
+    this.http.get<UserResponse>('/api/v1/users/me').subscribe({
+      next: (user) => {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        this.userSignal.set(user);
+      },
+      error: () => undefined,
+    });
+  }
+
   /** Edits the account profile and refreshes the locally stored user. */
   updateProfile(displayName: string): Observable<UserResponse> {
     return this.http.patch<UserResponse>('/api/v1/users/me', { displayName }).pipe(

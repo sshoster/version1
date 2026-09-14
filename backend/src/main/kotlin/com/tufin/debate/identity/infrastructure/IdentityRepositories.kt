@@ -11,4 +11,5 @@ interface UserRepository : MongoRepository<User, String> {
 interface RefreshTokenRepository : MongoRepository<RefreshToken, String> {
     fun findByTokenHash(tokenHash: String): RefreshToken?
     fun findByFamilyId(familyId: String): List<RefreshToken>
+    fun deleteByUserId(userId: String)
 }

@@ -10,6 +10,8 @@ class User(
     val email: String,
     var displayName: String,
     var passwordHash: String,
+    /** Set by a super admin; a suspended account cannot sign in or refresh its session. */
+    var suspendedAt: Instant? = null,
     var timezone: String = "Asia/Jerusalem",
     var avatarKey: String? = null,
     var avatarContentType: String? = null,

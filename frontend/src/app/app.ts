@@ -17,6 +17,11 @@ export class App {
   private readonly avatars = inject(AvatarService);
   private readonly router = inject(Router);
 
+  constructor() {
+    // Pick up server-side profile changes (e.g. the super-admin flag) on every app start.
+    if (this.auth.isAuthenticated()) this.auth.loadMe();
+  }
+
   protected readonly drawerOpen = signal(false);
   protected readonly profileOpen = signal(false);
   protected readonly avatarSaved = signal(false);

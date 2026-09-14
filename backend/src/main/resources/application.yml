@@ -67,6 +67,8 @@ app:
     # Google OAuth client ID for "Sign in with Google" (public identifier, not a secret).
     # Blank = the Google button is hidden and only email+password sign-in is offered.
     google-client-id: ${GOOGLE_CLIENT_ID:}
+    # Comma-separated emails allowed into the super-admin dashboard; empty disables it.
+    super-admin-emails: ${SUPER_ADMIN_EMAILS:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
   invitations:

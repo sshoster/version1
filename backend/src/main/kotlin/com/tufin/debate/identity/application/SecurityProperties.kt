@@ -16,6 +16,8 @@ data class SecurityProperties(
     var refreshTokenTtl: Duration = Duration.ofDays(30),
     /** Google OAuth client ID for "Sign in with Google"; blank disables the feature. */
     var googleClientId: String = "",
+    /** Comma-separated emails allowed into the super-admin dashboard; empty disables it. */
+    var superAdminEmails: List<String> = emptyList(),
 )
 
 /**

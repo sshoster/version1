@@ -2,6 +2,7 @@
 app:
   security:
     jwt-secret: "integration-test-secret-0123456789-0123456789"
+    super-admin-emails: root@admin.test
   mail:
     # Tests must never send real email, even when a developer .env enables it.
     enabled: false

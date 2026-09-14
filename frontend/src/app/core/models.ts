@@ -17,10 +17,28 @@ export type RoomStatus =
 
 export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
 
+export interface AdminUserView {
+  id: string;
+  email: string;
+  displayName: string;
+  suspended: boolean;
+  createdAt: string;
+}
+
+export interface AdminRoomView {
+  id: string;
+  title: string;
+  status: string;
+  joinCode: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface UserResponse {
   id: string;
   email: string;
   displayName: string;
+  superAdmin?: boolean;
 }
 
 export interface AuthResponse {

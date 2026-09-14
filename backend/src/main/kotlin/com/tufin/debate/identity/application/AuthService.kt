@@ -64,7 +64,12 @@ class AuthService(
         if (user == null || !passwordEncoder.matches(password, user.passwordHash)) {
             throw UnauthorizedException("The email or password is incorrect")
         }
+        ensureActive(user)
         return issueTokens(user)
+    }
+
+    private fun ensureActive(user: User) {
+        if (user.suspendedAt != null) throw UnauthorizedException("This account is suspended")
     }
 
     /**
@@ -80,6 +85,7 @@ class AuthService(
         }
         val email = identity.email.trim().lowercase()
         val user = users.findByEmail(email) ?: createGoogleUser(email, identity.displayName)
+        ensureActive(user)
         return issueTokens(user)
     }
 
@@ -127,6 +133,7 @@ class AuthService(
 
         val user = users.findById(presented.userId)
             .orElseThrow { UnauthorizedException("Please sign in again") }
+        ensureActive(user)
         return issueTokens(user, familyId = presented.familyId)
     }
 

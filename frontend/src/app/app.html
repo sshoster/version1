@@ -33,6 +33,9 @@
     <button class="btn btn-quiet close-button" type="button" [attr.aria-label]="i18n.t('common.close')" (click)="closeAll()">✕</button>
   </div>
   <a routerLink="/" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.home') }}</a>
+  @if (auth.user()?.superAdmin) {
+    <a routerLink="/admin" class="menu-item" (click)="closeAll()">🛠️ {{ i18n.t('menu.admin') }}</a>
+  }
   <a routerLink="/about" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.about') }}</a>
   <a routerLink="/privacy" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.privacy') }}</a>
   <a routerLink="/contact" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.contact') }}</a>
