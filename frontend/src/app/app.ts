@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth.service';
 import { AvatarService } from './core/files.service';
 import { I18nService } from './core/i18n.service';
+import { RoomTool, RoomUiService } from './core/room-ui.service';
 import { AvatarComponent } from './shared/avatar.component';
 
 @Component({
@@ -14,6 +15,7 @@ import { AvatarComponent } from './shared/avatar.component';
 export class App {
   protected readonly i18n = inject(I18nService);
   protected readonly auth = inject(AuthService);
+  protected readonly roomUi = inject(RoomUiService);
   private readonly avatars = inject(AvatarService);
   private readonly router = inject(Router);
 
@@ -39,6 +41,12 @@ export class App {
   protected closeAll(): void {
     this.drawerOpen.set(false);
     this.profileOpen.set(false);
+  }
+
+  /** Drawer entry for a room tool: close the menu, slide the tool panel in. */
+  protected openRoomTool(tool: RoomTool): void {
+    this.closeAll();
+    this.roomUi.openTool.set(tool);
   }
 
   protected onAvatarPicked(event: Event): void {

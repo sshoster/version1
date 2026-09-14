@@ -39,6 +39,15 @@
   <a routerLink="/about" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.about') }}</a>
   <a routerLink="/privacy" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.privacy') }}</a>
   <a routerLink="/contact" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.contact') }}</a>
+  @if (roomUi.activeRoom(); as activeRoom) {
+    <hr class="menu-sep" />
+    <p class="menu-section">{{ i18n.t('menu.roomSection') }}</p>
+    @if (activeRoom.isOwner) {
+      <button class="menu-item" type="button" (click)="openRoomTool('invite')">➕ {{ i18n.t('room.invite') }}</button>
+    }
+    <button class="menu-item" type="button" (click)="openRoomTool('files')">📎 {{ i18n.t('files.title') }}</button>
+    <button class="menu-item" type="button" (click)="openRoomTool('timeline')">🕘 {{ i18n.t('tl.title') }}</button>
+  }
   <hr class="menu-sep" />
   <button class="menu-item" type="button" (click)="toggleLanguage()">{{ i18n.t('menu.language') }}</button>
 </nav>

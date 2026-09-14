@@ -312,6 +312,7 @@ const DICT: Record<Lang, Record<string, string>> = {
 
     'menu.open': 'תפריט',
     'menu.home': 'הדיונים שלי',
+    'menu.roomSection': 'בדיון הנוכחי',
     'menu.profile': 'הפרופיל שלי',
     'account.title': 'הפרופיל שלי',
     'account.changePhoto': 'החלפת תמונה',
@@ -694,6 +695,7 @@ const DICT: Record<Lang, Record<string, string>> = {
 
     'menu.open': 'Menu',
     'menu.home': 'My discussions',
+    'menu.roomSection': 'In this discussion',
     'menu.profile': 'My profile',
     'account.title': 'My profile',
     'account.changePhoto': 'Change photo',

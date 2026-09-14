@@ -6,6 +6,7 @@ import { OutcomesService } from '../../core/outcomes.service';
 import { I18nService } from '../../core/i18n.service';
 import { ParticipantResponse, RoomResponse } from '../../core/models';
 import { NotificationsService } from '../../core/notifications.service';
+import { RoomUiService } from '../../core/room-ui.service';
 import { ProposalContent } from '../../core/proposals.service';
 import { RoomEventsService } from '../../core/room-events.service';
 import { RoomsService } from '../../core/rooms.service';
@@ -39,18 +40,13 @@ import { TimelineComponent } from './timeline.component';
         <p class="muted">{{ i18n.t('common.loading') }}</p>
       } @else if (room(); as r) {
         <div class="room-layout">
-          <!-- Static start-side column (right in RTL): add people + files. -->
-          <aside class="side-column start-col">
-            @if (isOwner()) {
+          @if (isOwner()) {
+            <!-- Start-side column (right in RTL): pending join requests only — the other room
+                 tools (invite / files / timeline) live in the hamburger drawer's slide panels. -->
+            <aside class="side-column start-col">
               <app-join-requests-card [roomId]="roomId()" />
-              <app-invite-card [roomId]="roomId()" (invited)="onInvited()" />
-            }
-            <app-files-panel
-              [roomId]="roomId()"
-              [canUpload]="isParty() || isAdvisor()"
-              [participants]="participants()"
-            />
-          </aside>
+            </aside>
+          }
 
           <div class="stack main-column">
             <header class="card head">
@@ -128,7 +124,6 @@ import { TimelineComponent } from './timeline.component';
               </div>
             }
 
-            <app-timeline [roomId]="roomId()" />
           </div>
 
           <!-- Static end-side column (left in RTL): who is here, live. -->
@@ -139,6 +134,43 @@ import { TimelineComponent } from './timeline.component';
               [pendingAnswerUserIds]="pendingAnswerIds()"
             />
           </aside>
+        </div>
+
+        <!-- Room tools opened from the hamburger drawer: slide-in panel, same gesture as the menu. -->
+        @if (ui.openTool(); as tool) {
+          <div class="tool-backdrop" (click)="ui.openTool.set(null)" aria-hidden="true"></div>
+        }
+        <div class="tool-drawer" [class.open]="ui.openTool() !== null" [attr.aria-hidden]="ui.openTool() === null">
+          <div class="tool-head">
+            <strong>
+              @switch (ui.openTool()) {
+                @case ('invite') { {{ i18n.t('room.invite') }} }
+                @case ('files') { {{ i18n.t('files.title') }} }
+                @case ('timeline') { {{ i18n.t('tl.title') }} }
+              }
+            </strong>
+            <button class="btn btn-quiet tool-close" type="button" [attr.aria-label]="i18n.t('common.close')"
+                    (click)="ui.openTool.set(null)">✕</button>
+          </div>
+          <div class="tool-body">
+            @switch (ui.openTool()) {
+              @case ('invite') {
+                @if (isOwner()) {
+                  <app-invite-card [roomId]="roomId()" (invited)="onInvited()" />
+                }
+              }
+              @case ('files') {
+                <app-files-panel
+                  [roomId]="roomId()"
+                  [canUpload]="isParty() || isAdvisor()"
+                  [participants]="participants()"
+                />
+              }
+              @case ('timeline') {
+                <app-timeline [roomId]="roomId()" />
+              }
+            }
+          </div>
         </div>
       }
     </div>
@@ -168,6 +200,27 @@ import { TimelineComponent } from './timeline.component';
     }
     .code-chip:hover { border-color: var(--color-primary); }
     .side-column { display: flex; flex-direction: column; gap: var(--space-3); }
+
+    /* Slide-in room tools (invite / files / timeline) — same gesture as the nav drawer,
+       arriving from the end side. */
+    .tool-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 55; }
+    .tool-drawer {
+      position: fixed; inset-block: 0; inset-inline-end: -420px;
+      inline-size: min(92vw, 400px);
+      background: var(--color-bg);
+      border-inline-start: 1px solid var(--color-border);
+      box-shadow: 0 0 24px rgba(0, 0, 0, 0.12);
+      transition: inset-inline-end 0.25s ease;
+      z-index: 56; display: flex; flex-direction: column;
+    }
+    .tool-drawer.open { inset-inline-end: 0; }
+    .tool-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--space-2) var(--space-3);
+      background: var(--color-surface); border-block-end: 1px solid var(--color-border);
+    }
+    .tool-close { min-height: 36px; min-width: 40px; }
+    .tool-body { flex: 1; overflow-y: auto; padding: var(--space-3); }
     @media (min-width: 1000px) {
       .room-layout { flex-direction: row; align-items: flex-start; }
       .main-column { order: 0; }
@@ -193,6 +246,7 @@ export class RoomPage {
   protected readonly i18n = inject(I18nService);
   protected readonly auth = inject(AuthService);
   private readonly rooms = inject(RoomsService);
+  protected readonly ui = inject(RoomUiService);
   private readonly notifications = inject(NotificationsService);
   private readonly outcomesService = inject(OutcomesService);
   private readonly roomEvents = inject(RoomEventsService);
@@ -227,6 +281,7 @@ export class RoomPage {
   });
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.ui.leave());
     effect(() => {
       const id = this.roomId();
       this.loading.set(true);
@@ -288,6 +343,12 @@ export class RoomPage {
       next: (room) => {
         this.room.set(room);
         this.loading.set(false);
+        // Publish to the app shell so the hamburger drawer offers this room's tools.
+        this.ui.enter({
+          roomId: room.id,
+          isOwner: room.myRoles.includes('OWNER'),
+          canUpload: room.myRoles.includes('PARTY') || room.myRoles.includes('OWNER') || room.myRoles.includes('ADVISOR'),
+        });
         // Content has actually rendered (not just navigation) — clear the home-page badge.
         // Reruns on every live event, so activity seen while inside the room stays cleared too.
         this.notifications.markRoomRead(id).subscribe({ error: () => undefined });
