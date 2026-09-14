@@ -97,7 +97,8 @@ time, errors, the outbox/idempotency primitives, and domain-event plumbing.
 
 Module responsibilities:
 
-- **identity** — users, registration/login, JWT issuance & refresh rotation.
+- **identity** — users, registration/login, optional Google sign-in (server-verified ID tokens),
+  account profile edit, avatars, JWT issuance & refresh rotation.
 - **discussion** — `DiscussionRoom` aggregate and its state machine.
 - **participants** — participants, invitations (hashed single-use tokens, expiry, revocation), role assignment.
 - **permissions** — the single authorization service: role × scope × resource checks used by every other module; audience-snapshot resolution.
@@ -106,7 +107,7 @@ Module responsibilities:
 - **agreements** — proposals, proposal versions, approval requests, approvals, and the three outcome artifacts (AI summary, deterministic approved understandings, AI agreement draft).
 - **files** — attachments (≤50MB, allowlisted types) following the message trust model (private → explicit audience share → withdraw-not-delete), behind a `FileStorage` port with local-disk and S3-compatible (AWS S3 / Cloudflare R2 / MinIO) implementations; also backs profile avatars.
 - **audit** — append-only hash-chained `AuditEvent` writer + the authorized plain-language timeline and technical audit read models.
-- **notifications** — in-app notifications, WebSocket event fan-out (room topics + audience-scoped user queues), per-room presence tracking (online/recently-active, in-memory), and the `EmailSender` port (SMTP / Brevo HTTPS).
+- **notifications** — in-app notifications with per-room unread counts (member-wide for room activity, audience-scoped for private events, actor excluded; live pings on `/user/queue/notifications`), WebSocket event fan-out (room topics + audience-scoped user queues), per-room presence tracking (online/recently-active, in-memory), and the `EmailSender` port (SMTP / Brevo HTTPS).
 - **llm** — `LlmProvider` SPI with the OpenAI adapter (retries, circuit breaker, JSON mode for structured calls) and the deterministic `FakeLlmProvider`; versioned prompt templates (`prompts/{draft,negotiation,summary,agreement}/v1.md`); budgets enforced by the negotiation orchestrator.
 
 ## 4. Room state machine

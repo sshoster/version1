@@ -33,6 +33,13 @@ data class RefreshRequest(
     @field:NotBlank val refreshToken: String = "",
 )
 
+data class GoogleLoginRequest(
+    @field:NotBlank val idToken: String = "",
+)
+
+/** Public, non-secret configuration the SPA needs before anyone is signed in. */
+data class AuthConfigResponse(val googleClientId: String)
+
 data class UserResponse(val id: String, val email: String, val displayName: String)
 
 data class AuthResponse(val accessToken: String, val refreshToken: String, val user: UserResponse)
@@ -46,7 +53,18 @@ private fun TokenPair.toResponse() = AuthResponse(
 @RestController
 @Validated
 @RequestMapping("/api/v1/auth")
-class AuthController(private val authService: AuthService) {
+class AuthController(
+    private val authService: AuthService,
+    private val securityProperties: com.tufin.debate.identity.application.SecurityProperties,
+) {
+
+    /** Public config for the SPA: which Google OAuth client to render the button for (blank = hidden). */
+    @GetMapping("/config")
+    fun config(): AuthConfigResponse = AuthConfigResponse(securityProperties.googleClientId.trim())
+
+    @PostMapping("/google")
+    fun google(@RequestBody @jakarta.validation.Valid request: GoogleLoginRequest): AuthResponse =
+        authService.loginWithGoogle(request.idToken).toResponse()
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)

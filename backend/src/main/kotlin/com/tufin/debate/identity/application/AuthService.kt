@@ -32,6 +32,7 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     private val jwtService: JwtService,
     private val props: SecurityProperties,
+    private val googleVerifier: GoogleIdVerifier,
 ) {
     companion object {
         /** Retention window before TTL cleanup removes expired refresh-token records. */
@@ -64,6 +65,41 @@ class AuthService(
             throw UnauthorizedException("The email or password is incorrect")
         }
         return issueTokens(user)
+    }
+
+    /**
+     * Sign in (or first-time register) with a verified Google ID token. Accounts are matched by
+     * email, so someone who registered with a password can also sign in with Google — Google has
+     * proven they own that address (unverified addresses are rejected).
+     */
+    fun loginWithGoogle(idToken: String): TokenPair {
+        val identity = googleVerifier.verify(idToken)
+            ?: throw UnauthorizedException("Google sign-in could not be verified")
+        if (!identity.emailVerified) {
+            throw UnauthorizedException("This Google account's email address is not verified")
+        }
+        val email = identity.email.trim().lowercase()
+        val user = users.findByEmail(email) ?: createGoogleUser(email, identity.displayName)
+        return issueTokens(user)
+    }
+
+    private fun createGoogleUser(email: String, displayName: String): User {
+        // Google manages this account's credential — store an unguessable placeholder so the
+        // password path can never match (bcrypt of 32 random bytes nobody knows).
+        val unusablePassword = newRefreshTokenValue()
+        val user = User(
+            id = Ids.newId(),
+            email = email,
+            displayName = displayName.trim().take(80).ifBlank { email.substringBefore('@') },
+            passwordHash = passwordEncoder.encode(unusablePassword),
+            createdAt = Instant.now(),
+        )
+        return try {
+            users.insert(user)
+        } catch (e: DuplicateKeyException) {
+            // Raced with another sign-in for the same brand-new account.
+            users.findByEmail(email) ?: throw e
+        }
     }
 
     fun refresh(rawRefreshToken: String): TokenPair {

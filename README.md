@@ -44,7 +44,16 @@ Live deployment: https://bridge-ai-fuev.onrender.com
   (local disk / AWS S3 / Cloudflare R2 / MinIO by env var), avatars with generated-initial fallback.
 - **Transparency**: hash-chained append-only audit, authorization-filtered plain-language
   timeline, participants panel with live presence.
-- **Platform**: JWT auth with rotating refresh tokens, AES-256-GCM field encryption for private
+- **Notifications**: per-room unread badges on the home page — permission-filtered activity
+  counts that update live over WebSocket and clear only once the room's content has actually
+  rendered; unread rooms float to the top.
+- **App shell**: sliding navigation drawer next to the Bridge AI title, avatar profile menu,
+  account profile page (photo + display name; room names stay per-room snapshots), sticky
+  room-details header, compact mobile participant strip.
+- **Sign in with Google** (optional): one-click registration/login via Google Identity Services;
+  the server verifies the ID token (signature + audience) and matches accounts by verified email.
+- **Platform**: JWT auth with rotating refresh tokens (sessions persist ~30 days of inactivity
+  with silent refresh — no re-login on every visit), AES-256-GCM field encryption for private
   content, rate limiting, transactional outbox, in-app notifications, i18n, OpenAPI docs at
   `/swagger-ui.html`.
 
@@ -159,6 +168,22 @@ same `EmailSender` port, selected with `MAIL_PROVIDER`:
 
 Delivery is best-effort: a mail failure never blocks invitation creation — the shareable link
 always remains available in the app, and the UI shows whether the email went out.
+
+## Sign in with Google (optional)
+
+The welcome page shows a "Sign in with Google" button when `GOOGLE_CLIENT_ID` is set (blank =
+button hidden, email+password still works). One-time setup:
+
+1. https://console.cloud.google.com/apis/credentials → Create credentials → **OAuth client ID** →
+   type **Web application**.
+2. Add `http://localhost:4200` and your public URL to **Authorized JavaScript origins**
+   (no redirect URIs needed — the app uses the Google Identity Services ID-token flow).
+3. Put the client ID in `GOOGLE_CLIENT_ID` (`.env` locally; Render env vars in production).
+
+The client ID is a public identifier — **no Google client secret is used anywhere**: the browser
+receives a signed ID token and the backend verifies it against Google (signature, expiry, and
+that the token was minted for this exact client ID). Accounts are matched by verified email, so
+an email+password user can also sign in with Google for the same account.
 
 ## Windows notes (encountered on this machine)
 

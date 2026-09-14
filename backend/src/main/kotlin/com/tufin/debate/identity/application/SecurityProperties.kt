@@ -13,7 +13,9 @@ data class SecurityProperties(
     /** HMAC secret for local JWT mode; required outside the local/test profiles. */
     var jwtSecret: String = "",
     var accessTokenTtl: Duration = Duration.ofMinutes(15),
-    var refreshTokenTtl: Duration = Duration.ofDays(14),
+    var refreshTokenTtl: Duration = Duration.ofDays(30),
+    /** Google OAuth client ID for "Sign in with Google"; blank disables the feature. */
+    var googleClientId: String = "",
 )
 
 /**

@@ -27,6 +27,18 @@ export class AuthService {
       .pipe(tap((response) => this.store(response)));
   }
 
+  /** Exchanges a Google Identity Services credential for our own session tokens. */
+  loginWithGoogle(idToken: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>('/api/v1/auth/google', { idToken })
+      .pipe(tap((response) => this.store(response)));
+  }
+
+  /** Public auth config (e.g. the Google client ID); blank client ID = button hidden. */
+  authConfig(): Observable<{ googleClientId: string }> {
+    return this.http.get<{ googleClientId: string }>('/api/v1/auth/config');
+  }
+
   refresh(): Observable<AuthResponse> {
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY) ?? '';
     return this.http

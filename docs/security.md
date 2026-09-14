@@ -40,7 +40,13 @@ column shows where each control landed; §9 lists the honest remaining gaps.
 ## 3. Authentication & session model
 
 - Local JWT mode (dev-isolated, OIDC-ready seam): `POST /auth/register|login|refresh`.
-- Access token ~15 min; refresh token rotated on every use, stored server-side hashed, family revoked on reuse detection.
+- Optional "Sign in with Google" (`POST /auth/google`): the Google Identity Services ID token is
+  verified server-side against Google (signature/expiry via tokeninfo, plus an audience check so
+  tokens minted for other apps are rejected); unverified emails are rejected; accounts match by
+  verified email; Google-created accounts get an unguessable placeholder password hash. No Google
+  client secret exists in the system.
+- Access token ~15 min; refresh token rotated on every use (30-day TTL), stored server-side
+  hashed, family revoked on reuse detection.
 - Passwords: Argon2id via Spring Security's encoder.
 - All auth state validated server-side per request; WebSocket handshake authenticates via the same JWT.
 
