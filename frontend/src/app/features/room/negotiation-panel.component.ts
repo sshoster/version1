@@ -174,7 +174,8 @@ export class NegotiationPanelComponent {
     const status = this.roomStatus();
     const current = this.run();
     const runInactive = !current || current.status === 'COMPLETED' || current.status === 'FAILED';
-    return status === 'ACTIVE' && runInactive;
+    // PROPOSAL_READY too: another round is allowed while a proposal is on the table.
+    return (status === 'ACTIVE' || status === 'PROPOSAL_READY') && runInactive;
   });
 
   ngOnInit(): void {

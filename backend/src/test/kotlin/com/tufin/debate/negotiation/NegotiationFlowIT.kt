@@ -84,12 +84,11 @@ class NegotiationFlowIT : IntegrationTestBase() {
         // The room advanced to PROPOSAL_READY.
         assertEquals("PROPOSAL_READY", json(get("/api/v1/rooms/${room.roomId}", room.alice.accessToken))["status"].asText())
 
-        // Only one active run at a time was enforced; a new run can start only from ACTIVE.
-        assertEquals(
-            409,
-            post("/api/v1/rooms/${room.roomId}/negotiation-runs", emptyMap<String, Any>(), room.alice.accessToken)
-                .statusCode.value(),
-        )
+        // A party may run another round while a proposal is on the table: the room steps back
+        // to ACTIVE and the new run completes like the first.
+        val secondRunId = startRun(room)
+        awaitRun(room, secondRunId, "COMPLETED")
+        assertEquals("PROPOSAL_READY", json(get("/api/v1/rooms/${room.roomId}", room.alice.accessToken))["status"].asText())
     }
 
     // ---- Test 9a: missing info stops the run, question waits for the user, answer resumes ----

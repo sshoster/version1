@@ -76,7 +76,9 @@ class NegotiationOrchestrator(
         idempotencyService.execute(roomId, "NEGOTIATION_START", idempotencyKey, StartRunResult::class.java) {
             permissions.requireRole(roomId, actor.userId, ParticipantRole.PARTY, ParticipantRole.OWNER)
             val room = rooms.find(roomId) ?: throw NotFoundException("This discussion was not found")
-            if (room.status != RoomStatus.ACTIVE) {
+            // PROPOSAL_READY counts too: a party may want another round while a proposal is on
+            // the table — the room steps back to ACTIVE (a legal transition) and the run begins.
+            if (room.status != RoomStatus.ACTIVE && room.status != RoomStatus.PROPOSAL_READY) {
                 throw ConflictException("The assistants can start once the discussion is active")
             }
             if (partyUserIds(roomId).size != 2) {
@@ -95,6 +97,9 @@ class NegotiationOrchestrator(
                 runs.insert(run) // unique partial index: one active run per room
             } catch (e: DuplicateKeyException) {
                 throw ConflictException("The assistants are already working in this discussion")
+            }
+            if (room.status == RoomStatus.PROPOSAL_READY) {
+                lifecycle.transition(roomId, RoomStatus.ACTIVE, ActorType.USER, actor.userId, "new assistants round")
             }
 
             auditService.append(roomId, ActorType.USER, actor.userId, "NEGOTIATION_STARTED", "NegotiationRun", run.id)
