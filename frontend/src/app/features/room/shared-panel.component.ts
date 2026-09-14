@@ -52,12 +52,15 @@ const AUTHOR_COLORS = ['#2f6ab3', '#b3612f', '#7a3fb3', '#b32f6a', '#2f9ab3', '#
         }
       </div>
 
-      <!-- Always in the DOM, only faded via CSS — inserting it mid-scroll would shift frames. -->
-      <button class="jump" type="button" [class.visible]="showJump()"
-              [attr.aria-hidden]="!showJump()" [tabindex]="showJump() ? 0 : -1"
-              (click)="scrollToBottom(true)">
-        ⬇ {{ i18n.t('shared.jumpToLatest') }}
-      </button>
+      <!-- Zero-height dock stuck to the viewport bottom (above the composer) while the chat is
+           in view; the button is always in the DOM and only fades via CSS, so scrolling never
+           triggers layout work. -->
+      <div class="jump-dock" aria-hidden="true">
+        <button class="jump" type="button" [class.visible]="showJump()"
+                [tabindex]="showJump() ? 0 : -1" (click)="scrollToBottom(true)">
+          ⬇ {{ i18n.t('shared.jumpToLatest') }}
+        </button>
+      </div>
     </div>
 
     @if (shareable()) {
@@ -129,12 +132,18 @@ const AUTHOR_COLORS = ['#2f6ab3', '#b3612f', '#7a3fb3', '#b32f6a', '#2f9ab3', '#
     }
     .withdraw-btn:hover { color: var(--color-danger); }
 
+    .jump-dock {
+      position: sticky; inset-block-end: 170px; /* clears the composer at the viewport bottom */
+      block-size: 0; overflow: visible;
+      display: flex; justify-content: center; align-items: flex-end;
+      z-index: 6;
+    }
     .jump {
-      position: absolute; inset-block-end: var(--space-4); inset-inline-start: 50%;
-      transform: translateX(-50%);
-      border: none; border-radius: 999px; cursor: pointer;
+      flex: none; white-space: nowrap;
+      transform: translateY(calc(-100% - 14px));
+      border: 2px solid #fff; border-radius: 999px; cursor: pointer;
       background: var(--color-primary); color: #fff; font-weight: 600; font-size: 0.85rem;
-      padding: 8px 16px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      padding: 8px 16px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
       opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
     }
     .jump.visible { opacity: 1; pointer-events: auto; }
