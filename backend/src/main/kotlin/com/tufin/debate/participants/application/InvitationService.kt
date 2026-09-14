@@ -143,7 +143,7 @@ class InvitationService(
             targetId = invitation.id,
             metadata = mapOf("role" to role.name),
         )
-        outboxService.enqueue(roomId, "ROOM_UPDATED", mapOf("resourceId" to roomId))
+        outboxService.enqueue(roomId, "ROOM_UPDATED", mapOf("resourceId" to roomId, "actorUserId" to actor.userId))
 
         if (room.status == RoomStatus.DRAFT) {
             lifecycle.transition(roomId, RoomStatus.INVITING, ActorType.SYSTEM, null, reason = "first invitation")
@@ -229,7 +229,10 @@ class InvitationService(
             targetId = actor.userId,
             metadata = mapOf("role" to invitation.role.name),
         )
-        outboxService.enqueue(invitation.roomId, "PARTICIPANT_JOINED", mapOf("resourceId" to actor.userId))
+        outboxService.enqueue(
+            invitation.roomId, "PARTICIPANT_JOINED",
+            mapOf("resourceId" to actor.userId, "actorUserId" to actor.userId),
+        )
 
         maybeAdvanceToIntake(invitation.roomId)
         return invitation.roomId

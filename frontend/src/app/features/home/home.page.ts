@@ -1,9 +1,12 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { I18nService } from '../../core/i18n.service';
 import { JoinRequestView, RoomResponse } from '../../core/models';
+import { NotificationsService } from '../../core/notifications.service';
+import { RoomEventsService } from '../../core/room-events.service';
 import { RoomsService } from '../../core/rooms.service';
 
 @Component({
@@ -22,9 +25,16 @@ import { RoomsService } from '../../core/rooms.service';
           <a class="btn btn-primary" routerLink="/new">{{ i18n.t('home.start') }}</a>
         </div>
       } @else {
-        @for (room of rooms(); track room.id) {
-          <a class="card room-card" [routerLink]="['/rooms', room.id]">
-            <strong>{{ room.title }}</strong>
+        @for (room of sortedRooms(); track room.id) {
+          <a class="card room-card" [class.has-unread]="unreadFor(room.id) > 0" [routerLink]="['/rooms', room.id]">
+            <span class="title-row">
+              <strong>{{ room.title }}</strong>
+              @if (unreadFor(room.id) > 0) {
+                <span class="unread-badge" [attr.aria-label]="i18n.t('home.unread')">
+                  {{ unreadFor(room.id) > 99 ? '99+' : unreadFor(room.id) }}
+                </span>
+              }
+            </span>
             <span class="badge">{{ i18n.t('status.' + room.status) }}</span>
             <span class="muted small">{{ i18n.t('home.updated') }} {{ room.updatedAt | date: 'short' }}</span>
           </a>
@@ -62,6 +72,13 @@ import { RoomsService } from '../../core/rooms.service';
       color: inherit;
     }
     .room-card:hover { border-color: var(--color-primary); }
+    .room-card.has-unread { border-inline-start: 4px solid var(--color-primary); }
+    .title-row { display: flex; align-items: center; gap: var(--space-2); }
+    .unread-badge {
+      background: var(--color-danger); color: #fff; border-radius: 999px;
+      min-width: 22px; height: 22px; padding: 0 6px; font-size: 0.78rem; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
     .small { font-size: 0.8rem; }
     .badge { align-self: flex-start; }
     .pending-chip { margin: 0; }
@@ -74,14 +91,27 @@ import { RoomsService } from '../../core/rooms.service';
 export class HomePage {
   protected readonly i18n = inject(I18nService);
   private readonly roomsService = inject(RoomsService);
+  private readonly notifications = inject(NotificationsService);
+  private readonly roomEvents = inject(RoomEventsService);
   private readonly router = inject(Router);
 
   protected readonly rooms = signal<RoomResponse[]>([]);
   protected readonly loading = signal(true);
   protected readonly myRequests = signal<JoinRequestView[]>([]);
+  protected readonly unread = signal<Map<string, number>>(new Map());
   protected readonly joinBusy = signal(false);
   protected readonly joinMessage = signal<string | null>(null);
   protected joinCode = '';
+
+  /** Rooms with unread activity float to the top of their attention group. */
+  protected readonly sortedRooms = computed(() => {
+    const unread = this.unread();
+    return [...this.rooms()].sort((a, b) => {
+      const aUnread = (unread.get(a.id) ?? 0) > 0 ? 0 : 1;
+      const bUnread = (unread.get(b.id) ?? 0) > 0 ? 0 : 1;
+      return aUnread - bUnread;
+    });
+  });
 
   constructor() {
     this.roomsService.list().subscribe({
@@ -95,6 +125,32 @@ export class HomePage {
       next: (requests) => this.myRequests.set(requests),
       error: () => undefined,
     });
+    this.notifications.unreadByRoom().subscribe({
+      next: (entries) => this.unread.set(new Map(entries.map((entry) => [entry.roomId, entry.unread]))),
+      error: () => undefined,
+    });
+    // Live: each stored notification is pinged over WebSocket — badge appears without a refresh.
+    this.roomEvents
+      .watchNotifications()
+      .pipe(takeUntilDestroyed())
+      .subscribe((ping) => {
+        this.unread.update((current) => {
+          const next = new Map(current);
+          next.set(ping.roomId, (next.get(ping.roomId) ?? 0) + 1);
+          return next;
+        });
+        // Activity in a room we don't list yet (e.g. a just-approved join) — reload the list.
+        if (!this.rooms().some((room) => room.id === ping.roomId)) {
+          this.roomsService.list().subscribe({
+            next: (rooms) => this.rooms.set(sortForAttention(rooms)),
+            error: () => undefined,
+          });
+        }
+      });
+  }
+
+  protected unreadFor(roomId: string): number {
+    return this.unread().get(roomId) ?? 0;
   }
 
   protected joinByCode(): void {

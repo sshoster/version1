@@ -77,7 +77,10 @@ class RoomService(
             targetType = "DiscussionRoom",
             targetId = room.id,
         )
-        outboxService.enqueue(room.id, "ROOM_UPDATED", mapOf("resourceId" to room.id, "status" to room.status.name))
+        outboxService.enqueue(
+            room.id, "ROOM_UPDATED",
+            mapOf("resourceId" to room.id, "status" to room.status.name, "actorUserId" to actor.userId),
+        )
 
         return RoomView(room, ownerRoles)
     }
@@ -141,7 +144,10 @@ class RoomService(
             targetId = roomId,
             metadata = changes,
         )
-        outboxService.enqueue(roomId, "ROOM_UPDATED", mapOf("resourceId" to roomId, "status" to room.status.name))
+        outboxService.enqueue(
+            roomId, "ROOM_UPDATED",
+            mapOf("resourceId" to roomId, "status" to room.status.name, "actorUserId" to actor.userId),
+        )
         return RoomView(room, participant.roles)
     }
 }

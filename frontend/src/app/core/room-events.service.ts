@@ -4,6 +4,13 @@ import { Observable, Subject, filter } from 'rxjs';
 import { AuthService } from './auth.service';
 import { RoomEvent } from './models';
 
+/** Ping sent whenever a new in-app notification is stored for this user. */
+export interface NotificationPing {
+  roomId: string;
+  type: string;
+  eventId: string;
+}
+
 /**
  * Live room updates over STOMP: `/topic/rooms/{id}` for room-wide events and the personal
  * `/user/queue/room-events` for audience-scoped ones. Payloads carry IDs only — content is always
@@ -16,6 +23,7 @@ export class RoomEventsService {
 
   private client: Client | null = null;
   private readonly events$ = new Subject<RoomEvent>();
+  private readonly notifications$ = new Subject<NotificationPing>();
   private subscribedRoomIds = new Set<string>();
 
   watchRoom(roomId: string): Observable<RoomEvent> {
@@ -27,6 +35,12 @@ export class RoomEventsService {
       }
     }
     return this.events$.pipe(filter((event) => event.roomId === roomId));
+  }
+
+  /** Live pings for this user's new in-app notifications — one per stored notification. */
+  watchNotifications(): Observable<NotificationPing> {
+    this.ensureConnected();
+    return this.notifications$.asObservable();
   }
 
   private ensureConnected(): void {
@@ -45,6 +59,7 @@ export class RoomEventsService {
       },
       onConnect: () => {
         client.subscribe('/user/queue/room-events', (message) => this.emit(message));
+        client.subscribe('/user/queue/notifications', (message) => this.emitNotification(message));
         this.subscribedRoomIds.forEach((roomId) => this.subscribeRoomTopic(roomId));
       },
     });
@@ -60,6 +75,15 @@ export class RoomEventsService {
     try {
       const event = JSON.parse(message.body) as RoomEvent;
       this.zone.run(() => this.events$.next(event));
+    } catch {
+      // Malformed frame: ignore.
+    }
+  }
+
+  private emitNotification(message: IMessage): void {
+    try {
+      const ping = JSON.parse(message.body) as NotificationPing;
+      this.zone.run(() => this.notifications$.next(ping));
     } catch {
       // Malformed frame: ignore.
     }

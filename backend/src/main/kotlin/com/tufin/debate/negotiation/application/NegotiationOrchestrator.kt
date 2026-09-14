@@ -98,7 +98,7 @@ class NegotiationOrchestrator(
             }
 
             auditService.append(roomId, ActorType.USER, actor.userId, "NEGOTIATION_STARTED", "NegotiationRun", run.id)
-            outboxService.enqueue(roomId, "NEGOTIATION_STARTED", mapOf("resourceId" to run.id))
+            outboxService.enqueue(roomId, "NEGOTIATION_STARTED", mapOf("resourceId" to run.id, "actorUserId" to actor.userId))
 
             executor.execute { executeLoop(run.id, roomId) }
             StartRunResult(run.id, run.status)
@@ -136,7 +136,7 @@ class NegotiationOrchestrator(
             lifecycle.transition(roomId, RoomStatus.ACTIVE, ActorType.USER, actor.userId, "run resumed")
         }
         auditService.append(roomId, ActorType.USER, actor.userId, "NEGOTIATION_RESUMED", "NegotiationRun", runId)
-        outboxService.enqueue(roomId, "NEGOTIATION_STARTED", mapOf("resourceId" to runId))
+        outboxService.enqueue(roomId, "NEGOTIATION_STARTED", mapOf("resourceId" to runId, "actorUserId" to actor.userId))
         executor.execute { executeLoop(runId, roomId) }
     }
 

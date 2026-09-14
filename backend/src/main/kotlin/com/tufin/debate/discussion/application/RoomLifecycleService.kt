@@ -71,7 +71,7 @@ class RoomLifecycleService(
         outboxService.enqueue(
             roomId = roomId,
             type = "ROOM_UPDATED",
-            payload = mapOf("resourceId" to roomId, "status" to to.name),
+            payload = mapOf("resourceId" to roomId, "status" to to.name, "actorUserId" to actorId),
         )
 
         room.status = to

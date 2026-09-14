@@ -122,7 +122,8 @@ class JoinRequestService(
             roomId, ActorType.USER, request.userId, "PARTICIPANT_JOINED", "Participant", request.userId,
             metadata = mapOf("role" to role.name),
         )
-        outboxService.enqueue(roomId, "PARTICIPANT_JOINED", mapOf("resourceId" to request.userId))
+        // actorUserId is the person who joined — members get the badge, the joiner doesn't badge themselves.
+        outboxService.enqueue(roomId, "PARTICIPANT_JOINED", mapOf("resourceId" to request.userId, "actorUserId" to request.userId))
         outboxService.enqueue(
             roomId, "JOIN_REQUEST_DECIDED",
             mapOf("resourceId" to requestId, "audienceUserIds" to listOf(request.userId), "actorUserId" to actor.userId),

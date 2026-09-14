@@ -26,4 +26,6 @@ interface NotificationRepository : MongoRepository<Notification, String> {
     fun findTop50ByUserIdOrderByCreatedAtDesc(userId: String): List<Notification>
     fun findByIdAndUserId(id: String, userId: String): Notification?
     fun countByUserIdAndReadAtIsNull(userId: String): Long
+    fun findByUserIdAndReadAtIsNull(userId: String): List<Notification>
+    fun findByUserIdAndRoomIdAndReadAtIsNull(userId: String, roomId: String): List<Notification>
 }

@@ -118,7 +118,10 @@ class ProposalService(
             roomId, ActorType.USER, actor.userId, "PROPOSAL_CREATED", "Proposal", proposal.id,
             metadata = mapOf("version" to "1"),
         )
-        outboxService.enqueue(roomId, "PROPOSAL_CREATED", mapOf("resourceId" to proposal.id, "resourceVersion" to 1))
+        outboxService.enqueue(
+            roomId, "PROPOSAL_CREATED",
+            mapOf("resourceId" to proposal.id, "resourceVersion" to 1, "actorUserId" to actor.userId),
+        )
         return view(roomId, proposal, actor)
     }
 
@@ -162,7 +165,7 @@ class ProposalService(
         )
         outboxService.enqueue(
             roomId, "PROPOSAL_REVISED",
-            mapOf("resourceId" to proposalId, "resourceVersion" to proposal.currentVersion),
+            mapOf("resourceId" to proposalId, "resourceVersion" to proposal.currentVersion, "actorUserId" to actor.userId),
         )
 
         // Approval was pending: the room steps back to ACTIVE until a new request is made.

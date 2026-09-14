@@ -29,6 +29,7 @@ const DICT: Record<Lang, Record<string, string>> = {
     'home.empty.hint': 'כשרוצים לפתור משהו יחד עם מישהו — מתחילים כאן.',
     'home.start': 'התחלת דיון חדש',
     'home.updated': 'עודכן',
+    'home.unread': 'עדכונים חדשים',
 
     'status.DRAFT': 'עוד לא הזמנת אף אחד לדיון',
     'status.INVITING': 'ממתינים שהצד השני יצטרף',
@@ -352,6 +353,7 @@ const DICT: Record<Lang, Record<string, string>> = {
     'home.empty.hint': 'When you want to resolve something together with someone — start here.',
     'home.start': 'Start a discussion',
     'home.updated': 'Updated',
+    'home.unread': 'New updates',
 
     'status.DRAFT': "You haven't invited anyone yet",
     'status.INVITING': 'Waiting for the other person to join',

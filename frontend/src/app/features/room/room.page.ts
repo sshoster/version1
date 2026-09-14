@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth.service';
 import { OutcomesService } from '../../core/outcomes.service';
 import { I18nService } from '../../core/i18n.service';
 import { ParticipantResponse, RoomResponse } from '../../core/models';
+import { NotificationsService } from '../../core/notifications.service';
 import { ProposalContent } from '../../core/proposals.service';
 import { RoomEventsService } from '../../core/room-events.service';
 import { RoomsService } from '../../core/rooms.service';
@@ -190,6 +191,7 @@ export class RoomPage {
   protected readonly i18n = inject(I18nService);
   protected readonly auth = inject(AuthService);
   private readonly rooms = inject(RoomsService);
+  private readonly notifications = inject(NotificationsService);
   private readonly outcomesService = inject(OutcomesService);
   private readonly roomEvents = inject(RoomEventsService);
   private readonly destroyRef = inject(DestroyRef);
@@ -271,6 +273,8 @@ export class RoomPage {
               break;
           }
           this.timeline()?.refreshIfOpen();
+          // The user is watching this room, so whatever just happened is not "unread".
+          this.notifications.markRoomRead(id).subscribe({ error: () => undefined });
         });
     });
   }
@@ -280,6 +284,9 @@ export class RoomPage {
       next: (room) => {
         this.room.set(room);
         this.loading.set(false);
+        // Content has actually rendered (not just navigation) — clear the home-page badge.
+        // Reruns on every live event, so activity seen while inside the room stays cleared too.
+        this.notifications.markRoomRead(id).subscribe({ error: () => undefined });
       },
       error: () => this.loading.set(false),
     });

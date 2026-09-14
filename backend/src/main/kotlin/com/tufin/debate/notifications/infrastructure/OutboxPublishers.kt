@@ -2,6 +2,7 @@ package com.tufin.debate.notifications.infrastructure
 
 import com.tufin.debate.notifications.domain.Notification
 import com.tufin.debate.notifications.domain.NotificationRepository
+import com.tufin.debate.participants.application.ParticipantDirectory
 import com.tufin.debate.shared.Ids
 import com.tufin.debate.shared.outbox.OutboxEvent
 import com.tufin.debate.shared.outbox.OutboxPublisher
@@ -47,24 +48,47 @@ class WebSocketOutboxPublisher(private val messagingTemplate: SimpMessagingTempl
     }
 }
 
-/** Creates in-app notifications from outbox events; idempotent per (eventId, userId). */
+/**
+ * Creates in-app notifications from outbox events; idempotent per (eventId, userId).
+ * Each stored notification is also pinged to the user's personal queue, so open pages
+ * (e.g. the home page badges) update live without polling.
+ */
 @Component
-class NotificationOutboxPublisher(private val notifications: NotificationRepository) : OutboxPublisher {
+class NotificationOutboxPublisher(
+    private val notifications: NotificationRepository,
+    private val participantDirectory: ParticipantDirectory,
+    private val messagingTemplate: SimpMessagingTemplate,
+) : OutboxPublisher {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     companion object {
+        /** Audience-scoped events notify exactly the audience carried in the payload. */
         private val NOTIFYING_TYPES = setOf(
             "SHARED_ITEM_PUBLISHED", "SHARED_ITEM_WITHDRAWN", "QUESTION_CREATED",
             "APPROVAL_REQUESTED", "APPROVAL_RECORDED", "FILE_SHARED",
             "JOIN_REQUESTED", "JOIN_REQUEST_DECIDED",
         )
+
+        /**
+         * Room-wide activity that should light the room's unread badge for every active member.
+         * Deliberately excludes per-turn negotiation progress ticks to avoid flooding.
+         */
+        private val MEMBER_NOTIFYING_TYPES = setOf(
+            "ROOM_UPDATED", "PARTICIPANT_JOINED", "PROPOSAL_CREATED", "PROPOSAL_REVISED",
+            "NEGOTIATION_STARTED", "NEGOTIATION_STOPPED", "NEGOTIATION_WAITING_FOR_USER",
+            "OUTCOME_CREATED",
+        )
     }
 
     override fun publish(event: OutboxEvent) {
-        if (event.type !in NOTIFYING_TYPES) return
+        val recipients = when (event.type) {
+            in NOTIFYING_TYPES -> audienceUserIds(event)
+            in MEMBER_NOTIFYING_TYPES -> participantDirectory.activeParticipants(event.roomId).map { it.userId }
+            else -> return
+        }
         val actor = event.payload["actorUserId"] as? String
-        audienceUserIds(event)
+        recipients
             .filter { it != actor }
             .forEach { userId ->
                 try {
@@ -78,6 +102,11 @@ class NotificationOutboxPublisher(private val notifications: NotificationReposit
                             eventId = event.id,
                             createdAt = Instant.now(),
                         ),
+                    )
+                    // Ping AFTER the insert so a client reacting to it always sees the new count.
+                    messagingTemplate.convertAndSendToUser(
+                        userId, "/queue/notifications",
+                        mapOf("roomId" to event.roomId, "type" to event.type, "eventId" to event.id),
                     )
                 } catch (e: DuplicateKeyException) {
                     log.debug("Notification for event {} user {} already exists (retry)", event.id, userId)

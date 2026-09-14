@@ -65,7 +65,7 @@ class ParticipantService(
             targetId = participantId,
             metadata = mapOf("from" to before, "to" to roles.toSortedSet().joinToString(",")),
         )
-        outboxService.enqueue(roomId, "ROOM_UPDATED", mapOf("resourceId" to participantId))
+        outboxService.enqueue(roomId, "ROOM_UPDATED", mapOf("resourceId" to participantId, "actorUserId" to actor.userId))
         return participant
     }
 }

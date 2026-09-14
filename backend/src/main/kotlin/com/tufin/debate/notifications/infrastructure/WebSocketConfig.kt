@@ -28,6 +28,7 @@ class StompPrincipal(private val userId: String) : Principal {
  * every SUBSCRIBE is authorized server-side (design doc §10, security.md T9):
  *  - `/topic/rooms/{roomId}` — room-wide events; requires active room membership.
  *  - `/user/queue/room-events` — per-user scoped events (audience-filtered on the publish side).
+ *  - `/user/queue/notifications` — one ping per stored in-app notification (live unread badges).
  */
 @Configuration
 @EnableWebSocketMessageBroker
@@ -61,7 +62,7 @@ class WsAuthChannelInterceptor(
 
     companion object {
         private val ROOM_TOPIC = Regex("^/topic/rooms/([^/]+)$")
-        private const val USER_QUEUE = "/user/queue/room-events"
+        private val USER_QUEUES = setOf("/user/queue/room-events", "/user/queue/notifications")
     }
 
     override fun preSend(message: Message<*>, channel: MessageChannel): Message<*> {
@@ -87,7 +88,7 @@ class WsAuthChannelInterceptor(
                         // NotFoundException if not a member — subscription is rejected.
                         permissions.requireParticipant(roomMatch.groupValues[1], userId)
                     }
-                    destination == USER_QUEUE -> Unit // own queue only; broker resolves per session
+                    destination in USER_QUEUES -> Unit // own queues only; broker resolves per session
                     else -> {
                         log.warn("Rejected subscription to unexpected destination {}", destination)
                         throw org.springframework.messaging.MessagingException("Unknown destination")
