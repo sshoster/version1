@@ -93,11 +93,14 @@ const AUTHOR_COLORS = ['#2f6ab3', '#b3612f', '#7a3fb3', '#b32f6a', '#2f9ab3', '#
       /* Grows with the conversation; once it would overflow the screen, it scrolls internally
          instead — so a fresh discussion keeps the composer right under the first messages. */
       max-block-size: clamp(300px, calc(100dvh - 330px), 900px);
-      overflow-y: auto; overscroll-behavior: contain;
+      overflow-y: auto;
       padding: var(--space-1); margin-block-end: var(--space-2);
     }
     @media (max-width: 999px) {
-      .chat-window { max-block-size: clamp(260px, calc(100dvh - 300px), 700px); }
+      /* Phone: pane + composer fit one screen and all scrolling stays inside the pane,
+         so the composer never floats/unfloats while the page moves (that flip is janky
+         with mobile browsers' collapsing address bar). */
+      .chat-window { max-block-size: clamp(240px, calc(100dvh - 340px), 700px); }
     }
 
     .item {
@@ -133,14 +136,17 @@ const AUTHOR_COLORS = ['#2f6ab3', '#b3612f', '#7a3fb3', '#b32f6a', '#2f9ab3', '#
       padding: 8px 16px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     }
 
-    /* Floats at the bottom of the screen while the chat is in view (page-scrolling within the
-       conversation keeps it reachable); scrolled past the chat card, it locks into place. */
+    /* Desktop: floats at the bottom of the screen while the chat is in view; scrolled past
+       the chat card, it locks into place. */
     .composer {
       display: flex; flex-direction: column; gap: var(--space-2);
       position: sticky; inset-block-end: 0; z-index: 5;
       background: var(--color-surface);
       padding-block: var(--space-2);
       border-block-start: 1px solid var(--color-border);
+    }
+    @media (max-width: 999px) {
+      .composer { position: static; border-block-start: none; padding-block: 0; }
     }
     .composer-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
     .not-shareable { text-align: center; padding: var(--space-3); background: var(--color-bg); border-radius: var(--radius); }

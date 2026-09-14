@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { I18nService } from '../../core/i18n.service';
 import { JoinRequestView, RoomResponse } from '../../core/models';
@@ -94,6 +94,7 @@ export class HomePage {
   private readonly notifications = inject(NotificationsService);
   private readonly roomEvents = inject(RoomEventsService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly rooms = signal<RoomResponse[]>([]);
   protected readonly loading = signal(true);
@@ -114,6 +115,10 @@ export class HomePage {
   });
 
   constructor() {
+    // A shared join link (/?code=XXXXXX) lands here with the code prefilled — one tap to request.
+    const linkedCode = this.route.snapshot.queryParamMap.get('code');
+    if (linkedCode) this.joinCode = linkedCode.toUpperCase();
+
     this.roomsService.list().subscribe({
       next: (rooms) => {
         this.rooms.set(sortForAttention(rooms));

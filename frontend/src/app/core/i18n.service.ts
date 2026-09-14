@@ -368,6 +368,9 @@ const DICT: Record<Lang, Record<string, string>> = {
     'admin.confirmSuspend': 'להשהות את {0}? לא ניתן יהיה להתחבר עד הפעלה מחדש.',
     'admin.confirmDeleteUser': 'למחוק את החשבון של {0} לצמיתות? תוכן קיים בדיונים יישמר.',
     'admin.confirmDeleteRoom': 'למחוק את הדיון "{0}" לצמיתות, כולל כל ההודעות והקבצים? פעולה זו אינה הפיכה.',
+    'admin.copyCode': 'העתקת קוד ההצטרפות',
+    'admin.copyLink': 'קישור הצטרפות',
+    'admin.copied': 'הועתק ✓',
     'admin.makeAdmin': 'מינוי כמנהל/ת',
     'admin.removeAdmin': 'הסרת ניהול',
 
@@ -745,6 +748,9 @@ const DICT: Record<Lang, Record<string, string>> = {
     'admin.confirmSuspend': 'Suspend {0}? They will not be able to sign in until reactivated.',
     'admin.confirmDeleteUser': "Permanently delete {0}'s account? Their existing discussion content is kept.",
     'admin.confirmDeleteRoom': 'Permanently delete "{0}" with all its messages and files? This cannot be undone.',
+    'admin.copyCode': 'Copy join code',
+    'admin.copyLink': 'Join link',
+    'admin.copied': 'Copied ✓',
     'admin.makeAdmin': 'Make admin',
     'admin.removeAdmin': 'Remove admin',
 

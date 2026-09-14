@@ -94,6 +94,7 @@ import { AdminRoomView, AdminUserView } from '../../core/models';
             <thead>
               <tr>
                 <th>{{ i18n.t('admin.roomTitle') }}</th>
+                <th>{{ i18n.t('join.codeLabel') }}</th>
                 <th>{{ i18n.t('admin.state') }}</th>
                 <th>{{ i18n.t('admin.created') }}</th>
                 <th></th>
@@ -103,6 +104,18 @@ import { AdminRoomView, AdminUserView } from '../../core/models';
               @for (room of rooms(); track room.id) {
                 <tr>
                   <td>{{ room.title }}</td>
+                  <td>
+                    @if (room.joinCode) {
+                      <button class="code-chip" type="button" (click)="copyCode(room)"
+                              [title]="i18n.t('admin.copyCode')">
+                        {{ copied() === room.id + ':code' ? i18n.t('admin.copied') : room.joinCode + ' ⧉' }}
+                      </button>
+                      <button class="btn btn-quiet mini" type="button" (click)="copyJoinLink(room)"
+                              [title]="i18n.t('admin.copyLink')">
+                        {{ copied() === room.id + ':link' ? i18n.t('admin.copied') : '🔗 ' + i18n.t('admin.copyLink') }}
+                      </button>
+                    }
+                  </td>
                   <td>{{ i18n.t('status.' + room.status) }}</td>
                   <td>{{ room.createdAt | date: 'short' }}</td>
                   <td class="actions">
@@ -133,6 +146,12 @@ import { AdminRoomView, AdminUserView } from '../../core/models';
     .actions { display: flex; gap: 4px; flex-wrap: wrap; }
     .mini { min-height: 32px; padding: 0 10px; font-size: 0.8rem; }
     .danger { color: var(--color-danger); }
+    .code-chip {
+      border: 1px dashed var(--color-border); background: var(--color-bg);
+      border-radius: 999px; cursor: pointer; padding: 3px 10px;
+      font-family: monospace; font-size: 0.85rem; direction: ltr;
+    }
+    .code-chip:hover { border-color: var(--color-primary); }
     td input { margin-block: 2px; inline-size: 100%; max-inline-size: 220px; display: block; }
   `,
 })
@@ -204,6 +223,26 @@ export class AdminPage {
   protected deleteUser(user: AdminUserView): void {
     if (!confirm(this.i18n.t('admin.confirmDeleteUser', user.displayName))) return;
     this.run(this.admin.deleteUser(user.id));
+  }
+
+  protected readonly copied = signal<string | null>(null);
+
+  protected copyCode(room: AdminRoomView): void {
+    if (!room.joinCode) return;
+    this.copyWithFeedback(room.joinCode, `${room.id}:code`);
+  }
+
+  /** A shareable link that lands on the home page with the code prefilled. */
+  protected copyJoinLink(room: AdminRoomView): void {
+    if (!room.joinCode) return;
+    this.copyWithFeedback(`${location.origin}/?code=${room.joinCode}`, `${room.id}:link`);
+  }
+
+  private copyWithFeedback(text: string, key: string): void {
+    void navigator.clipboard.writeText(text).then(() => {
+      this.copied.set(key);
+      setTimeout(() => this.copied.set(null), 2000);
+    });
   }
 
   protected deleteRoom(room: AdminRoomView): void {
