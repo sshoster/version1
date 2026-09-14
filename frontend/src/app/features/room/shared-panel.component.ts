@@ -52,11 +52,12 @@ const AUTHOR_COLORS = ['#2f6ab3', '#b3612f', '#7a3fb3', '#b32f6a', '#2f9ab3', '#
         }
       </div>
 
-      @if (showJump()) {
-        <button class="jump" type="button" (click)="scrollToBottom(true)">
-          ⬇ {{ i18n.t('shared.jumpToLatest') }}
-        </button>
-      }
+      <!-- Always in the DOM, only faded via CSS — inserting it mid-scroll would shift frames. -->
+      <button class="jump" type="button" [class.visible]="showJump()"
+              [attr.aria-hidden]="!showJump()" [tabindex]="showJump() ? 0 : -1"
+              (click)="scrollToBottom(true)">
+        ⬇ {{ i18n.t('shared.jumpToLatest') }}
+      </button>
     </div>
 
     @if (shareable()) {
@@ -129,12 +130,14 @@ const AUTHOR_COLORS = ['#2f6ab3', '#b3612f', '#7a3fb3', '#b32f6a', '#2f9ab3', '#
     .withdraw-btn:hover { color: var(--color-danger); }
 
     .jump {
-      position: absolute; inset-block-end: var(--space-3); inset-inline-start: 50%;
+      position: absolute; inset-block-end: var(--space-4); inset-inline-start: 50%;
       transform: translateX(-50%);
       border: none; border-radius: 999px; cursor: pointer;
       background: var(--color-primary); color: #fff; font-weight: 600; font-size: 0.85rem;
       padding: 8px 16px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
     }
+    .jump.visible { opacity: 1; pointer-events: auto; }
 
     /* Desktop: floats at the bottom of the screen while the chat is in view; scrolled past
        the chat card, it locks into place. */
