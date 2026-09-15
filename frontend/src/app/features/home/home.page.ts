@@ -7,6 +7,7 @@ import { I18nService } from '../../core/i18n.service';
 import { JoinRequestView, RoomResponse } from '../../core/models';
 import { NotificationsService } from '../../core/notifications.service';
 import { RoomEventsService } from '../../core/room-events.service';
+import { RoomsStore } from '../../core/rooms-store.service';
 import { RoomsService } from '../../core/rooms.service';
 
 @Component({
@@ -91,13 +92,14 @@ import { RoomsService } from '../../core/rooms.service';
 export class HomePage {
   protected readonly i18n = inject(I18nService);
   private readonly roomsService = inject(RoomsService);
+  private readonly roomsStore = inject(RoomsStore);
   private readonly notifications = inject(NotificationsService);
   private readonly roomEvents = inject(RoomEventsService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly rooms = signal<RoomResponse[]>([]);
-  protected readonly loading = signal(true);
+  protected readonly rooms = computed(() => sortForAttention(this.roomsStore.rooms()));
+  protected readonly loading = computed(() => !this.roomsStore.loaded());
   protected readonly myRequests = signal<JoinRequestView[]>([]);
   protected readonly unread = signal<Map<string, number>>(new Map());
   protected readonly joinBusy = signal(false);
@@ -119,13 +121,8 @@ export class HomePage {
     const linkedCode = this.route.snapshot.queryParamMap.get('code');
     if (linkedCode) this.joinCode = linkedCode.toUpperCase();
 
-    this.roomsService.list().subscribe({
-      next: (rooms) => {
-        this.rooms.set(sortForAttention(rooms));
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    // Cached list: instant render from the store; a fetch happens only past the TTL.
+    this.roomsStore.ensureFresh();
     this.roomsService.myJoinRequests().subscribe({
       next: (requests) => this.myRequests.set(requests),
       error: () => undefined,
@@ -144,12 +141,9 @@ export class HomePage {
           next.set(ping.roomId, (next.get(ping.roomId) ?? 0) + 1);
           return next;
         });
-        // Activity in a room we don't list yet (e.g. a just-approved join) — reload the list.
+        // Activity in a room we don't list yet (e.g. a just-approved join) — reload the cache.
         if (!this.rooms().some((room) => room.id === ping.roomId)) {
-          this.roomsService.list().subscribe({
-            next: (rooms) => this.rooms.set(sortForAttention(rooms)),
-            error: () => undefined,
-          });
+          this.roomsStore.reload();
         }
       });
   }

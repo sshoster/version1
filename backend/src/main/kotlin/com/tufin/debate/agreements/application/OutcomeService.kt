@@ -17,7 +17,7 @@ import com.tufin.debate.discussion.application.RoomDirectory
 import com.tufin.debate.identity.application.AuthenticatedUser
 import com.tufin.debate.identity.application.UserDirectory
 import com.tufin.debate.notifications.application.EmailAttachment
-import com.tufin.debate.notifications.application.EmailSender
+import com.tufin.debate.notifications.application.EmailDispatcher
 import com.tufin.debate.llm.application.LlmProvider
 import com.tufin.debate.llm.application.LlmRequest
 import com.tufin.debate.messaging.application.SharedContextReader
@@ -53,7 +53,7 @@ class OutcomeService(
     private val llmProvider: LlmProvider,
     private val auditService: AuditService,
     private val outboxService: OutboxService,
-    private val emailSender: EmailSender,
+    private val emailDispatcher: EmailDispatcher,
     private val userDirectory: UserDirectory,
 ) {
     companion object {
@@ -292,15 +292,13 @@ class OutcomeService(
         """.trimMargin()
         val htmlBody = textBody.replace("\n", "<br/>")
 
+        // Reactive rule: deliveries are queued on the notification executor — the request
+        // returns immediately with how many were queued; failures are logged per recipient.
         var sent = 0
         targets.forEach { participant ->
             val email = emails[participant.userId] ?: return@forEach
-            try {
-                emailSender.send(email, subject, htmlBody, textBody, attachment)
-                sent++
-            } catch (e: Exception) {
-                // Best-effort per recipient: one bad mailbox must not block the rest.
-            }
+            emailDispatcher.dispatch(email, subject, htmlBody, textBody, attachment)
+            sent++
         }
         auditService.append(
             roomId, ActorType.USER, actor.userId,

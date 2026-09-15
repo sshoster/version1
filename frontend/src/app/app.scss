@@ -107,6 +107,63 @@
   margin: var(--space-1) 0;
 }
 
+.menu-row {
+  display: flex;
+  align-items: center;
+}
+
+.menu-row .grow { flex: 1; }
+
+.rooms-toggle {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  margin-inline-end: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-bg);
+  color: var(--color-primary);
+  font-size: 1.5rem;
+  line-height: 1;
+  padding-block-end: 6px; /* optically center the chevron glyph */
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.15s ease;
+}
+
+.rooms-toggle:hover {
+  background: var(--color-primary-soft, #e3efe9);
+  border-color: var(--color-primary);
+}
+
+.rooms-toggle.collapsed {
+  transform: rotate(180deg);
+}
+
+.menu-rooms {
+  max-block-size: 260px;
+  overflow-y: auto;
+  margin-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--color-border);
+}
+
+.menu-rooms .room-link {
+  min-height: 36px;
+  padding-block: 6px;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.menu-rooms .room-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .menu-section {
   margin: var(--space-1) var(--space-3) 0;
   font-size: 0.75rem;

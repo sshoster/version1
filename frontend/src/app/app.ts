@@ -4,6 +4,7 @@ import { AuthService } from './core/auth.service';
 import { AvatarService } from './core/files.service';
 import { I18nService } from './core/i18n.service';
 import { RoomTool, RoomUiService } from './core/room-ui.service';
+import { RoomsStore } from './core/rooms-store.service';
 import { AvatarComponent } from './shared/avatar.component';
 
 @Component({
@@ -16,6 +17,7 @@ export class App {
   protected readonly i18n = inject(I18nService);
   protected readonly auth = inject(AuthService);
   protected readonly roomUi = inject(RoomUiService);
+  protected readonly roomsStore = inject(RoomsStore);
   private readonly avatars = inject(AvatarService);
   private readonly router = inject(Router);
 
@@ -25,12 +27,16 @@ export class App {
   }
 
   protected readonly drawerOpen = signal(false);
+  /** The drawer's rooms sub-list: open by default, collapsible by the user. */
+  protected readonly roomsListOpen = signal(true);
   protected readonly profileOpen = signal(false);
   protected readonly avatarSaved = signal(false);
 
   protected toggleDrawer(): void {
     this.profileOpen.set(false);
     this.drawerOpen.set(!this.drawerOpen());
+    // The drawer lists the user's rooms — serve from cache, refetch only when stale.
+    if (this.drawerOpen() && this.auth.isAuthenticated()) this.roomsStore.ensureFresh();
   }
 
   protected toggleProfile(): void {
@@ -75,6 +81,7 @@ export class App {
 
   protected signOut(): void {
     this.closeAll();
+    this.roomsStore.clear();
     this.auth.logout();
     void this.router.navigate(['/welcome']);
   }

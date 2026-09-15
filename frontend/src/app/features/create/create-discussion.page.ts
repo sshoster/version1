@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { switchMap, of, map, catchError } from 'rxjs';
 import { I18nService } from '../../core/i18n.service';
+import { RoomsStore } from '../../core/rooms-store.service';
 import { RoomsService } from '../../core/rooms.service';
 import { DemoFlowComponent } from '../../shared/demo-flow.component';
 import { DemoShotsComponent } from '../../shared/demo-shots.component';
@@ -79,6 +80,7 @@ import { DemoShotsComponent } from '../../shared/demo-shots.component';
 export class CreateDiscussionPage {
   protected readonly i18n = inject(I18nService);
   private readonly rooms = inject(RoomsService);
+  private readonly roomsStore = inject(RoomsStore);
   private readonly router = inject(Router);
 
   protected readonly step = signal<1 | 2 | 3>(1);
@@ -108,7 +110,10 @@ export class CreateDiscussionPage {
         }),
       )
       .subscribe({
-        next: (roomId) => void this.router.navigate(['/rooms', roomId]),
+        next: (roomId) => {
+          this.roomsStore.invalidate(); // the new room must appear on the next home visit
+          void this.router.navigate(['/rooms', roomId]);
+        },
         error: (err: { error?: { message?: string } }) => {
           this.busy.set(false);
           this.error.set(err?.error?.message ?? this.i18n.t('auth.genericError'));

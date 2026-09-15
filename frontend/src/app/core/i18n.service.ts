@@ -392,6 +392,7 @@ const DICT: Record<Lang, Record<string, string>> = {
     'admin.copyCode': 'העתקת קוד ההצטרפות',
     'admin.copyLink': 'קישור הצטרפות',
     'admin.copied': 'הועתק ✓',
+    'room.lifecycle.delete': 'מחיקת הדיון לצמיתות',
     'admin.makeAdmin': 'מינוי כמנהל/ת',
     'admin.removeAdmin': 'הסרת ניהול',
 
@@ -793,6 +794,7 @@ const DICT: Record<Lang, Record<string, string>> = {
     'admin.copyCode': 'Copy join code',
     'admin.copyLink': 'Join link',
     'admin.copied': 'Copied ✓',
+    'room.lifecycle.delete': 'Delete permanently',
     'admin.makeAdmin': 'Make admin',
     'admin.removeAdmin': 'Remove admin',
 

@@ -1,12 +1,13 @@
 import { Component, DestroyRef, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { OutcomesService } from '../../core/outcomes.service';
 import { I18nService } from '../../core/i18n.service';
 import { ParticipantResponse, RoomResponse } from '../../core/models';
 import { NotificationsService } from '../../core/notifications.service';
 import { RoomUiService } from '../../core/room-ui.service';
+import { RoomsStore } from '../../core/rooms-store.service';
 import { ProposalContent } from '../../core/proposals.service';
 import { RoomEventsService } from '../../core/room-events.service';
 import { RoomsService } from '../../core/rooms.service';
@@ -116,6 +117,9 @@ import { TimelineComponent } from './timeline.component';
                 } @else if (r.status === 'CLOSED') {
                   @if (isOwner()) {
                     <button class="btn btn-secondary" type="button" (click)="lifecycle('reopen')">{{ i18n.t('room.lifecycle.reopen') }}</button>
+                    <button class="btn btn-quiet danger" type="button" (click)="deleteRoom(r.title)">
+                      🗑️ {{ i18n.t('room.lifecycle.delete') }}
+                    </button>
                   }
                 } @else {
                   <button class="btn btn-quiet" type="button" (click)="lifecycle('pause')">{{ i18n.t('room.lifecycle.pause') }}</button>
@@ -232,6 +236,7 @@ import { TimelineComponent } from './timeline.component';
     .head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
     .head-row h1 { margin: 0; }
     .lifecycle { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
+    .lifecycle .danger { color: var(--color-danger); }
     .status { margin: 0; color: var(--color-text-muted); }
     .objective { margin: var(--space-1) 0 0; font-size: 0.9rem; }
     .tabs { display: flex; gap: var(--space-2); }
@@ -246,6 +251,8 @@ export class RoomPage {
   protected readonly i18n = inject(I18nService);
   protected readonly auth = inject(AuthService);
   private readonly rooms = inject(RoomsService);
+  private readonly roomsStore = inject(RoomsStore);
+  private readonly router = inject(Router);
   protected readonly ui = inject(RoomUiService);
   private readonly notifications = inject(NotificationsService);
   private readonly outcomesService = inject(OutcomesService);
@@ -372,6 +379,18 @@ export class RoomPage {
           : action === 'close' ? this.outcomesService.closeRoom(id)
             : this.outcomesService.reopenRoom(id);
     call.subscribe({ next: () => this.reloadRoom(id), error: () => this.reloadRoom(id) });
+  }
+
+  /** Admin-only, CLOSED-only (server-enforced): permanent removal of the whole discussion. */
+  protected deleteRoom(title: string): void {
+    if (!confirm(this.i18n.t('admin.confirmDeleteRoom', title))) return;
+    this.rooms.deleteRoom(this.roomId()).subscribe({
+      next: () => {
+        this.roomsStore.invalidate();
+        void this.router.navigate(['/']);
+      },
+      error: () => undefined,
+    });
   }
 
   protected copyCode(code: string): void {

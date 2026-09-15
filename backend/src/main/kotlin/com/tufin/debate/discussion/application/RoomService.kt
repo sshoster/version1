@@ -30,6 +30,7 @@ class RoomService(
     private val outboxService: OutboxService,
     private val mongoTemplate: MongoTemplate,
     private val lifecycleService: RoomLifecycleService,
+    private val roomPurge: com.tufin.debate.admin.application.RoomPurgeService,
 ) {
     @Transactional
     fun create(actor: AuthenticatedUser, title: String, objective: String?): RoomView {
@@ -107,6 +108,20 @@ class RoomService(
         val participant = permissions.requireRole(roomId, actor.userId, ParticipantRole.PARTY, ParticipantRole.OWNER)
         val room = lifecycleService.transition(roomId, target, com.tufin.debate.audit.domain.ActorType.USER, actor.userId)
         return RoomView(room, participant.roles)
+    }
+
+    /**
+     * Permanent deletion by the room's admin — allowed ONLY for a CLOSED discussion (close first,
+     * delete second: no live conversation can vanish under the participants). Cascades over every
+     * room-scoped record and the stored files, like the platform-admin purge.
+     */
+    fun deleteClosed(roomId: String, actor: AuthenticatedUser) {
+        permissions.requireRole(roomId, actor.userId, ParticipantRole.OWNER)
+        val room = rooms.findById(roomId).orElseThrow { NotFoundException("This discussion was not found") }
+        if (room.status != RoomStatus.CLOSED) {
+            throw com.tufin.debate.shared.errors.ConflictException("Only a closed discussion can be deleted")
+        }
+        roomPurge.purgeRoom(roomId)
     }
 
     /** Reopening a CLOSED discussion is restricted to the owner. */

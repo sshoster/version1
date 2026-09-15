@@ -54,7 +54,7 @@ class JoinRequestService(
     private val lifecycle: RoomLifecycleService,
     private val auditService: AuditService,
     private val outboxService: OutboxService,
-    private val emailSender: com.tufin.debate.notifications.application.EmailSender,
+    private val emailDispatcher: com.tufin.debate.notifications.application.EmailDispatcher,
     @param:org.springframework.beans.factory.annotation.Value("\${app.invitations.base-url}") private val baseUrl: String,
 ) {
     private val log = org.slf4j.LoggerFactory.getLogger(javaClass)
@@ -201,9 +201,9 @@ class JoinRequestService(
                     |For questions, contact the discussion admin${if (ownerName.isNotBlank()) " $ownerName" else ""}.
                 """.trimMargin()
             }
-            emailSender.send(email, subject, body.replace("\n", "<br/>"), body)
+            emailDispatcher.dispatch(email, subject, body.replace("\n", "<br/>"), body)
         } catch (e: Exception) {
-            log.warn("Could not send join-request decision email (decision already recorded)", e)
+            log.warn("Could not compose the join-request decision email (decision already recorded)", e)
         }
     }
 

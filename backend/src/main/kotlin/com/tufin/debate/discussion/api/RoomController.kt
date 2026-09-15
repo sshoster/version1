@@ -96,6 +96,12 @@ class RoomController(private val roomService: RoomService) {
     fun close(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser): RoomResponse =
         roomService.lifecycle(roomId, user, RoomStatus.CLOSED).toResponse()
 
+    /** Permanent deletion by the room's admin — only when the discussion is CLOSED. */
+    @org.springframework.web.bind.annotation.DeleteMapping("/{roomId}")
+    fun delete(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser) {
+        roomService.deleteClosed(roomId, user)
+    }
+
     /** Reopening a closed discussion is an owner action (design doc: "reopened when authorized"). */
     @PostMapping("/{roomId}/reopen")
     fun reopen(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser): RoomResponse =

@@ -32,7 +32,25 @@
     <span class="brand">{{ i18n.t('app.title') }}</span>
     <button class="btn btn-quiet close-button" type="button" [attr.aria-label]="i18n.t('common.close')" (click)="closeAll()">✕</button>
   </div>
-  <a routerLink="/" class="menu-item" (click)="closeAll()">{{ i18n.t('menu.home') }}</a>
+  <div class="menu-row">
+    <a routerLink="/" class="menu-item grow" (click)="closeAll()">{{ i18n.t('menu.home') }}</a>
+    @if (auth.isAuthenticated() && roomsStore.rooms().length > 0) {
+      <button
+        class="rooms-toggle" type="button" [class.collapsed]="!roomsListOpen()"
+        [attr.aria-expanded]="roomsListOpen()" [attr.aria-label]="i18n.t('menu.home')"
+        (click)="roomsListOpen.set(!roomsListOpen())"
+      >⌄</button>
+    }
+  </div>
+  @if (auth.isAuthenticated() && roomsListOpen() && roomsStore.rooms().length > 0) {
+    <div class="menu-rooms">
+      @for (room of roomsStore.rooms().slice(0, 10); track room.id) {
+        <a class="menu-item room-link" [routerLink]="['/rooms', room.id]" (click)="closeAll()">
+          💬 <span class="room-title">{{ room.title }}</span>
+        </a>
+      }
+    </div>
+  }
   @if (auth.user()?.superAdmin) {
     <a routerLink="/admin" class="menu-item" (click)="closeAll()">🛠️ {{ i18n.t('menu.admin') }}</a>
   }

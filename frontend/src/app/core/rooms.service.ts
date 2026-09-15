@@ -28,6 +28,11 @@ export class RoomsService {
     return this.http.post<RoomResponse>('/api/v1/rooms', { title, objective });
   }
 
+  /** Permanent deletion by the room admin — the server allows it only for CLOSED discussions. */
+  deleteRoom(roomId: string): Observable<void> {
+    return this.http.delete<void>(`/api/v1/rooms/${roomId}`);
+  }
+
   participants(roomId: string): Observable<ParticipantResponse[]> {
     return this.http.get<ParticipantResponse[]>(`/api/v1/rooms/${roomId}/participants`);
   }
