@@ -4,11 +4,13 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth.interceptor';
+import { serverBaseInterceptor } from './core/server-base';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    // serverBaseInterceptor first: it must rewrite the URL before anything else runs.
+    provideHttpClient(withInterceptors([serverBaseInterceptor, authInterceptor])),
   ],
 };
