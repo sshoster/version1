@@ -1,6 +1,8 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, NgZone, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { App as CapacitorApp } from '@capacitor/app';
 import { AuthService } from './core/auth.service';
+import { isNativeApp } from './core/server-base';
 import { AvatarService } from './core/files.service';
 import { I18nService } from './core/i18n.service';
 import { RoomTool, RoomUiService } from './core/room-ui.service';
@@ -22,6 +24,7 @@ export class App {
   private readonly roomEvents = inject(RoomEventsService);
   private readonly avatars = inject(AvatarService);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
 
   constructor() {
     // Pick up server-side profile changes (e.g. the super-admin flag) on every app start.
@@ -31,6 +34,18 @@ export class App {
     effect(() => {
       if (this.auth.isAuthenticated()) this.roomEvents.watchNotifications();
     });
+    // Native app: https links to our host (invite links, join codes) open the app —
+    // route them like in-app navigation instead of staying on whatever page was open.
+    if (isNativeApp()) {
+      void CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+        try {
+          const parsed = new URL(url);
+          this.zone.run(() => void this.router.navigateByUrl(parsed.pathname + parsed.search));
+        } catch {
+          // Not a URL we can route — ignore.
+        }
+      });
+    }
   }
 
   protected readonly drawerOpen = signal(false);
