@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "686756234764",
+    "project_id": "bridge-ai-3841b",
+    "storage_bucket": "bridge-ai-3841b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:686756234764:android:923886633a7a51ad275029",
+        "android_client_info": {
+          "package_name": "com.bridge.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfermv9uQP4EcipI7u--w2qgvrnkrWVR8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

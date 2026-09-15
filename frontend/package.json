@@ -24,6 +24,7 @@
         "@capacitor/app": "^8.1.1",
         "@capacitor/cli": "^8.5.2",
         "@capacitor/core": "^8.5.2",
+        "@capacitor/push-notifications": "^8.1.2",
         "@capgo/capacitor-social-login": "^8.5.8",
         "@stomp/stompjs": "^7.3.0",
         "capacitor-secure-storage-plugin": "^0.13.0",

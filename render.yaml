@@ -36,6 +36,8 @@ services:
         # First origin: the web app (keep in sync with APP_BASE_URL).
         # https://localhost is the Capacitor native app (Android/iOS WebView origin).
         value: https://bridge-ai-fuev.onrender.com,https://localhost
+      - key: FCM_SERVICE_ACCOUNT_JSON
+        sync: false # PLACEHOLDER - Firebase service-account JSON (whole file content); empty disables mobile push
 
       # --- Files: Cloudflare R2 (S3-compatible) ---
       - key: STORAGE_PROVIDER

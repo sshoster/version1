@@ -1,5 +1,6 @@
 package com.bridge.debate.notifications.infrastructure
 
+import com.bridge.debate.notifications.application.PushDispatcher
 import com.bridge.debate.notifications.domain.Notification
 import com.bridge.debate.notifications.domain.NotificationRepository
 import com.bridge.debate.participants.application.ParticipantDirectory
@@ -58,6 +59,8 @@ class NotificationOutboxPublisher(
     private val notifications: NotificationRepository,
     private val participantDirectory: ParticipantDirectory,
     private val messagingTemplate: SimpMessagingTemplate,
+    private val presence: PresenceTracker,
+    private val pushDispatcher: PushDispatcher,
 ) : OutboxPublisher {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -108,6 +111,10 @@ class NotificationOutboxPublisher(
                         userId, "/queue/notifications",
                         mapOf("roomId" to event.roomId, "type" to event.type, "eventId" to event.id),
                     )
+                    // Away from the app? Reach the phone (async, content-free body).
+                    if (!presence.isOnlineAnywhere(userId)) {
+                        pushDispatcher.dispatch(userId, event.roomId, event.type)
+                    }
                 } catch (e: DuplicateKeyException) {
                     log.debug("Notification for event {} user {} already exists (retry)", event.id, userId)
                 }

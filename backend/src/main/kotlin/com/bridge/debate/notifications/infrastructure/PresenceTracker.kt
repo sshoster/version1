@@ -51,6 +51,9 @@ class PresenceTracker(
         private const val APP_QUEUE = "/user/queue/room-events"
     }
 
+    /** True while the user has any live connection — used to skip push for users already looking. */
+    fun isOnlineAnywhere(userId: String): Boolean = (appOnline[userId] ?: 0) > 0
+
     @EventListener
     fun onSubscribe(event: SessionSubscribeEvent) {
         val accessor = StompHeaderAccessor.wrap(event.message)
