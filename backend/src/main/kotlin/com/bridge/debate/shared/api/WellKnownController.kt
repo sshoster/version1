@@ -13,9 +13,13 @@ import org.springframework.web.bind.annotation.RestController
  */
 @RestController
 class WellKnownController(
+    // Defaults: debug keystore + local upload keystore. Once the app is on Google Play, set
+    // APP_ANDROID_CERT_FINGERPRINTS to ALSO include Google's app-signing-key SHA-256
+    // (Play Console -> Test and release -> App integrity) - Play re-signs with that key.
     @param:Value(
         "\${app.android-cert-fingerprints:" +
-            "E5:DE:74:AF:4E:71:B3:2C:23:A6:D1:D2:E5:D0:B3:1B:F9:2F:3A:9E:5E:EF:91:1A:A0:96:5C:BD:5F:2A:DD:BF}",
+            "E5:DE:74:AF:4E:71:B3:2C:23:A6:D1:D2:E5:D0:B3:1B:F9:2F:3A:9E:5E:EF:91:1A:A0:96:5C:BD:5F:2A:DD:BF," +
+            "E3:AE:7C:1C:47:53:E6:18:14:FE:D6:7C:AC:23:3D:D9:E5:A8:4F:BB:F1:5D:DA:55:AE:96:17:10:28:86:71:93}",
     )
     private val certFingerprints: List<String>,
 ) {
