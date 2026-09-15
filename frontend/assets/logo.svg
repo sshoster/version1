@@ -19,6 +19,6 @@
   <circle cx="232" cy="420" r="40" fill="#1f6f5c"/>
   <circle cx="792" cy="420" r="88" fill="#ffffff"/>
   <circle cx="792" cy="420" r="40" fill="#1f6f5c"/>
-  <!-- spark: agreement -->
-  <circle cx="512" cy="330" r="46" fill="#ffd166"/>
+  <!-- AI above the bridge -->
+  <text x="512" y="368" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="200" fill="#ffffff">AI</text>
 </svg>
