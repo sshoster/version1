@@ -321,13 +321,17 @@ class NegotiationOrchestrator(
             )
         }
 
+        val turnTokens = response.inputTokens + response.outputTokens
         transactionTemplate.execute {
             turns.insert(turn)
             newQuestions.forEach { questions.insert(it) }
-            run.turnCount = turnNumber
-            run.tokensUsed += response.inputTokens + response.outputTokens
-            run.updatedAt = Instant.now()
-            runs.save(run)
+            // Reload inside the transaction: the template retries transient conflicts, and a
+            // retried callback must not compound in-memory mutations (+=) or stale @Version state.
+            val current = runs.findById(run.id).orElseThrow { IllegalStateException("run disappeared") }
+            current.turnCount = turnNumber
+            current.tokensUsed += turnTokens
+            current.updatedAt = Instant.now()
+            runs.save(current)
             auditService.append(
                 roomId = roomId,
                 actorType = ActorType.AI,

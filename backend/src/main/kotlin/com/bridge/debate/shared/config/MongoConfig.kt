@@ -14,7 +14,8 @@ class MongoConfig {
     fun transactionManager(dbFactory: MongoDatabaseFactory): MongoTransactionManager =
         MongoTransactionManager(dbFactory)
 
+    /** Retries transactions Mongo aborts with a transient label (WriteConflict etc.). */
     @Bean
     fun transactionTemplate(transactionManager: MongoTransactionManager): TransactionTemplate =
-        TransactionTemplate(transactionManager)
+        RetryingTransactionTemplate(transactionManager)
 }
