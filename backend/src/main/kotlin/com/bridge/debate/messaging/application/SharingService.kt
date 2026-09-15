@@ -99,6 +99,8 @@ class SharingService(
         private val PREVIEW_TTL: Duration = Duration.ofMinutes(15)
         private const val MAX_LENGTH = 8000
         private val SHAREABLE_STATUSES = setOf(RoomStatus.INTAKE, RoomStatus.ACTIVE, RoomStatus.WAITING_FOR_USER)
+        private const val SYSTEM_AUTHOR_ID = "system"
+        private const val SYSTEM_AUTHOR_NAME = "Bridge AI"
     }
 
     // ---------------- preview ----------------
@@ -301,6 +303,81 @@ class SharingService(
             createdAt = item.createdAt,
             versionCreatedAt = version.createdAt,
         )
+    }
+
+    // ---------------- system notes ----------------
+
+    /**
+     * Posts a SYSTEM_GENERATED note to the common chat — no preview/approval, because callers may
+     * only pass content derived from material every room participant already sees (e.g. the
+     * assistants' cycle summary, which is distilled from the shared negotiation transcript).
+     * Server-internal: no controller exposes this, so SYSTEM_GENERATED stays non-client-settable.
+     */
+    fun publishSystemNote(roomId: String, text: String) {
+        val trimmed = text.trim().take(MAX_LENGTH)
+        if (trimmed.isEmpty()) return
+        val audienceParticipants = directory.activeParticipants(roomId)
+        if (audienceParticipants.isEmpty()) return
+        val now = Instant.now()
+        transactionTemplate.execute {
+            val item = items.insert(
+                SharedItem(
+                    id = Ids.newId(),
+                    roomId = roomId,
+                    authorUserId = SYSTEM_AUTHOR_ID,
+                    contentType = ContentType.TEXT,
+                    currentVersion = 1,
+                    createdAt = now,
+                    updatedAt = now,
+                ),
+            )
+            val snapshot = snapshots.insert(
+                AudienceSnapshot(
+                    id = Ids.newId(),
+                    roomId = roomId,
+                    scope = VisibilityScope.ALL_ROOM_PARTICIPANTS,
+                    participantIds = audienceParticipants.map { it.id },
+                    userIds = audienceParticipants.map { it.userId },
+                    createdAt = now,
+                ),
+            )
+            val version = versions.insert(
+                SharedItemVersion(
+                    id = Ids.newId(),
+                    sharedItemId = item.id,
+                    roomId = roomId,
+                    version = 1,
+                    text = trimmed,
+                    origin = ContentOrigin.SYSTEM_GENERATED,
+                    authorUserId = SYSTEM_AUTHOR_ID,
+                    authorDisplayName = SYSTEM_AUTHOR_NAME,
+                    audienceSnapshotId = snapshot.id,
+                    audienceUserIds = audienceParticipants.map { it.userId },
+                    scope = VisibilityScope.ALL_ROOM_PARTICIPANTS,
+                    createdAt = now,
+                ),
+            )
+            auditService.append(
+                roomId = roomId,
+                actorType = ActorType.SYSTEM,
+                actorId = null,
+                action = "SHARED_ITEM_PUBLISHED",
+                targetType = "SharedItem",
+                targetId = item.id,
+                metadata = mapOf("version" to "1", "origin" to ContentOrigin.SYSTEM_GENERATED.name),
+                audienceSnapshotId = snapshot.id,
+            )
+            outboxService.enqueue(
+                roomId = roomId,
+                type = "SHARED_ITEM_PUBLISHED",
+                payload = mapOf(
+                    "resourceId" to item.id,
+                    "resourceVersion" to version.version,
+                    "audienceUserIds" to audienceParticipants.map { it.userId },
+                    "actorUserId" to null,
+                ),
+            )
+        }
     }
 
     // ---------------- reads ----------------

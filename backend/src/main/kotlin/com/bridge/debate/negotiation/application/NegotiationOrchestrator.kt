@@ -9,6 +9,7 @@ import com.bridge.debate.identity.application.AuthenticatedUser
 import com.bridge.debate.llm.application.LlmProvider
 import com.bridge.debate.llm.application.LlmRequest
 import com.bridge.debate.messaging.application.SharedContextReader
+import com.bridge.debate.messaging.application.SharingService
 import com.bridge.debate.negotiation.domain.NegotiationRun
 import com.bridge.debate.negotiation.domain.NegotiationTurn
 import com.bridge.debate.negotiation.domain.Question
@@ -55,6 +56,7 @@ class NegotiationOrchestrator(
     private val contextBuilder: NegotiationContextBuilder,
     private val handoffSummarizer: CycleHandoffSummarizer,
     private val sharedContext: SharedContextReader,
+    private val sharing: SharingService,
     private val llmProvider: LlmProvider,
     private val permissions: PermissionsService,
     private val participants: ParticipantDirectory,
@@ -369,6 +371,12 @@ class NegotiationOrchestrator(
         run.updatedAt = Instant.now()
         runs.save(run)
 
+        // The cycle's conclusion goes straight to the common chat as a system note — it is
+        // distilled from the shared transcript both parties already see, so no approval gate.
+        if (run.turnCount > 0) {
+            run.result?.let { result -> cycleSummaryNote(result)?.let { sharing.publishSystemNote(run.roomId, it) } }
+        }
+
         transactionTemplate.execute {
             auditService.append(
                 run.roomId, ActorType.SYSTEM, null, "NEGOTIATION_STOPPED", "NegotiationRun", run.id,
@@ -435,6 +443,30 @@ class NegotiationOrchestrator(
             recommendedProposal = if (reason == RunStopReason.POSSIBLE_AGREEMENT) last else null,
             stopReason = reason,
         )
+    }
+
+    /** The chat wording of a finished cycle's conclusion (Hebrew — the product's default locale). */
+    private fun cycleSummaryNote(result: RoundResult): String? {
+        if (result.stopReason == RunStopReason.PROVIDER_ERROR) return null
+        return buildString {
+            if (result.recommendedProposal != null) {
+                appendLine("🤝 העוזרים סיימו את הסבב וגיבשו הצעת הסכמה: ${result.recommendedProposal.title}")
+                result.recommendedProposal.terms.forEach { appendLine("• $it") }
+                append("ההצעה ממתינה לאישור נפרד של כל אחד מהצדדים.")
+            } else {
+                appendLine("🤝 העוזרים סיימו סבב שיחה ללא הסכמה סופית. סיכום הביניים:")
+                appendLine()
+                appendLine("מוסכם עד כה:")
+                if (result.agreedPoints.isEmpty()) appendLine("• (עדיין אין נקודות מוסכמות)")
+                result.agreedPoints.forEach { appendLine("• $it") }
+                appendLine()
+                appendLine("נקודות שנותרו פתוחות:")
+                if (result.unresolvedPoints.isEmpty()) appendLine("• (לא זוהו נקודות פתוחות)")
+                result.unresolvedPoints.forEach { appendLine("• $it") }
+                appendLine()
+                append("הסבב הבא של העוזרים ימשיך מהנקודות האלה.")
+            }
+        }
     }
 
     /**

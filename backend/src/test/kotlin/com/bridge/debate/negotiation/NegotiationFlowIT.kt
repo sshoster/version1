@@ -159,6 +159,13 @@ class NegotiationFlowIT : IntegrationTestBase() {
         assertTrue(result["agreedPoints"].size() > 0, "agreed points distilled from the shared transcript")
         assertTrue(result["unresolvedPoints"].size() > 0, "open issues distilled from the shared transcript")
 
+        // The conclusion is posted to the common chat automatically as a system message —
+        // no approval gate, visible to both parties, provenance-labeled SYSTEM_GENERATED.
+        val bobChat = json(get("/api/v1/rooms/${room.roomId}/shared-items", room.bob.accessToken))
+        val systemNote = bobChat.first { it["origin"].asText() == "SYSTEM_GENERATED" }
+        assertTrue(systemNote["text"].asText().contains("סיכום"), "cycle summary posted to the chat")
+        assertTrue(systemNote["text"].asText().contains("נקודות שנותרו פתוחות"))
+
         // The next cycle's assistants receive the summary and continue from it (the fake provider
         // echoes a distinct message when PREVIOUS_CYCLE_SUMMARY is present in its context).
         val secondRun = awaitRun(room, startRun(room), "COMPLETED")
