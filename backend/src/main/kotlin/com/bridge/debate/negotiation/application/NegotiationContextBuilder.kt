@@ -5,6 +5,7 @@ import com.bridge.debate.messaging.application.SharedFact
 import com.bridge.debate.negotiation.domain.AiAgentProfile
 import com.bridge.debate.negotiation.domain.NegotiationTurn
 import com.bridge.debate.negotiation.domain.Question
+import com.bridge.debate.negotiation.domain.RoundResult
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Service
 
@@ -37,10 +38,22 @@ class NegotiationContextBuilder {
         transcript: List<NegotiationTurn>,
         answeredQuestions: List<Question>,
         currentTurn: Int,
+        previousCycle: RoundResult? = null,
     ): String = buildString {
         appendLine("DISCUSSION_TITLE: ${room.title}")
         appendLine("OBJECTIVE: ${room.objective ?: "(none provided)"}")
         appendLine()
+        if (previousCycle != null) {
+            appendLine("PREVIOUS_CYCLE_SUMMARY (where the assistants stopped last time — resume from here,")
+            appendLine("do not re-open the agreed points unless your user's profile contradicts them):")
+            appendLine("  agreed:")
+            if (previousCycle.agreedPoints.isEmpty()) appendLine("    (nothing was agreed yet)")
+            previousCycle.agreedPoints.forEach { appendLine("    - ${it.replace('\n', ' ')}") }
+            appendLine("  still open:")
+            if (previousCycle.unresolvedPoints.isEmpty()) appendLine("    (none recorded)")
+            previousCycle.unresolvedPoints.forEach { appendLine("    - ${it.replace('\n', ' ')}") }
+            appendLine()
+        }
         appendLine("OWN_PROFILE (private to your user):")
         appendLine("  goals: ${profile?.goals.orEmpty().ifBlank { "(not provided)" }}")
         appendLine("  boundaries: ${profile?.boundaries.orEmpty().ifBlank { "(not provided)" }}")

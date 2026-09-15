@@ -1,0 +1,5 @@
+{
+	"appId": "com.bridge.app",
+	"appName": "Bridge AI",
+	"webDir": "dist/frontend/browser"
+}

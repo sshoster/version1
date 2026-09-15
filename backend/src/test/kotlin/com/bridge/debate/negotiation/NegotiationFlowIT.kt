@@ -147,6 +147,28 @@ class NegotiationFlowIT : IntegrationTestBase() {
         assertEquals(10, run["turns"].size())
     }
 
+    // ---- Inconclusive cycles hand off: summary stored on the run, next cycle resumes from it ----
+    @Test
+    fun `inconclusive cycle stores a handoff summary and the next cycle resumes from it`() {
+        val room = activeRoom("SCENARIO:LOOP ללא התכנסות")
+        val firstRun = awaitRun(room, startRun(room), "COMPLETED")
+        assertEquals("MAX_TURNS", firstRun["stopReason"].asText())
+
+        // The handoff summary (agreed + open points) is stored on the run — both parties see it.
+        val result = firstRun["result"]
+        assertTrue(result["agreedPoints"].size() > 0, "agreed points distilled from the shared transcript")
+        assertTrue(result["unresolvedPoints"].size() > 0, "open issues distilled from the shared transcript")
+
+        // The next cycle's assistants receive the summary and continue from it (the fake provider
+        // echoes a distinct message when PREVIOUS_CYCLE_SUMMARY is present in its context).
+        val secondRun = awaitRun(room, startRun(room), "COMPLETED")
+        val firstTurnMessage = secondRun["turns"][0]["publicMessage"].asText()
+        assertTrue(
+            firstTurnMessage.contains("הסבב הקודם"),
+            "second cycle should start from the previous cycle's summary, got: $firstTurnMessage",
+        )
+    }
+
     // ---- Fact-reference integrity: citing unshared content kills the run safely ----
     @Test
     fun `citing content outside the party's shared facts stops the run`() {

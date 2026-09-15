@@ -23,6 +23,7 @@ class FakeLlmProvider : LlmProvider {
     override suspend fun generate(request: LlmRequest): LlmResponse {
         val text = when {
             request.templateId.startsWith("draft/") -> draft(request.user)
+            request.templateId.startsWith("negotiation-handoff/") -> handoffSummary()
             request.templateId.startsWith("negotiation/") -> negotiationTurn(request.user)
             request.templateId.startsWith("summary/") -> summary(request.user)
             request.templateId.startsWith("agreement/") -> agreementDraft(request.user)
@@ -85,7 +86,12 @@ class FakeLlmProvider : LlmProvider {
             )
 
             context.contains("SCENARIO:LOOP") -> mapOf(
-                "publicMessage" to "נקודה נוספת לחידוד הדדי.",
+                // Echo whether a previous cycle's summary reached this context (asserted in tests).
+                "publicMessage" to if (context.contains("PREVIOUS_CYCLE_SUMMARY")) {
+                    "ממשיכים מהנקודות הפתוחות של הסבב הקודם."
+                } else {
+                    "נקודה נוספת לחידוד הדדי."
+                },
                 "proposal" to null,
                 "sharedFactsUsed" to listOfNotNull(firstFactId),
                 "stopReason" to "NONE",
@@ -131,6 +137,14 @@ class FakeLlmProvider : LlmProvider {
     }
 
     /** Deterministic discussion summary built from the provided material. */
+    /** Deterministic handoff summary for an unfinished assistants' cycle. */
+    private fun handoffSummary(): String = json.writeValueAsString(
+        mapOf(
+            "agreedPoints" to listOf("שני הצדדים מעוניינים להגיע להסכמה"),
+            "openIssues" to listOf("טרם סוכמו התנאים הסופיים"),
+        ),
+    )
+
     private fun summary(material: String): String {
         val statements = Regex("SHARED_STATEMENTS[^\\n]*\\n((?:  - [^\\n]+\\n?)*)").find(material)
             ?.groupValues?.get(1)?.lines()?.filter { it.isNotBlank() } ?: emptyList()

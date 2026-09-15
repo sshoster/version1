@@ -1,0 +1,1 @@
+import{F as t,aa as e}from"./chunk-AT6PVYI6.js";var i=class o{activeRoom=e(null);openTool=e(null);enter(n){this.activeRoom.set(n)}leave(){this.activeRoom.set(null),this.openTool.set(null)}static \u0275fac=function(l){return new(l||o)};static \u0275prov=t({token:o,factory:o.\u0275fac,providedIn:"root"})};export{i as a};

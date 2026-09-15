@@ -53,6 +53,7 @@ class NegotiationOrchestrator(
     private val questions: QuestionRepository,
     private val profiles: AgentProfileService,
     private val contextBuilder: NegotiationContextBuilder,
+    private val handoffSummarizer: CycleHandoffSummarizer,
     private val sharedContext: SharedContextReader,
     private val llmProvider: LlmProvider,
     private val permissions: PermissionsService,
@@ -266,6 +267,7 @@ class NegotiationOrchestrator(
                         transcript = transcript,
                         answeredQuestions = answered,
                         currentTurn = turnNumber,
+                        previousCycle = previousCycle(roomId, run.id),
                     ),
                 ),
             )
@@ -415,15 +417,37 @@ class NegotiationOrchestrator(
         val allTurns = turns.findByRunIdAndRoomIdOrderByTurnNumberAsc(run.id, run.roomId)
         val proposals = allTurns.mapNotNull { it.proposal }
         val last = proposals.lastOrNull()
+        // Inconclusive end: distill the shared transcript into agreed vs. open points — this is
+        // both what the parties see as the cycle's outcome and what seeds the next cycle.
+        val handoff = if (reason != RunStopReason.POSSIBLE_AGREEMENT && reason != RunStopReason.PROVIDER_ERROR) {
+            rooms.find(run.roomId)?.let { room -> handoffSummarizer.summarize(room, allTurns) }
+        } else {
+            null
+        }
         return RoundResult(
-            agreedPoints = if (reason == RunStopReason.POSSIBLE_AGREEMENT) last?.terms.orEmpty() else emptyList(),
-            unresolvedPoints = last?.openIssues.orEmpty(),
+            agreedPoints = when {
+                reason == RunStopReason.POSSIBLE_AGREEMENT -> last?.terms.orEmpty()
+                else -> handoff?.agreedPoints.orEmpty()
+            },
+            unresolvedPoints = handoff?.openIssues ?: last?.openIssues.orEmpty(),
             proposalsConsidered = proposals.map { it.title }.distinct(),
             assumptions = last?.assumptions.orEmpty(),
             recommendedProposal = if (reason == RunStopReason.POSSIBLE_AGREEMENT) last else null,
             stopReason = reason,
         )
     }
+
+    /**
+     * The most recent finished cycle's summary (this room, before [currentRunId]) — the baseline
+     * the assistants resume from. Only results with substance count.
+     */
+    private fun previousCycle(roomId: String, currentRunId: String): RoundResult? =
+        runs.findByRoomIdOrderByCreatedAtDesc(roomId)
+            .firstOrNull {
+                it.id != currentRunId && it.status == RunStatus.COMPLETED &&
+                    it.result.let { r -> r != null && (r.agreedPoints.isNotEmpty() || r.unresolvedPoints.isNotEmpty()) }
+            }
+            ?.result
 
     private fun partyUserIds(roomId: String): List<String> =
         participants.activeParticipants(roomId)
