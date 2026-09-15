@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a8a72"/>
+      <stop offset="1" stop-color="#1f6f5c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <!-- bridge arch -->
+  <path d="M 192 640 Q 512 360 832 640" fill="none" stroke="#ffffff" stroke-width="56" stroke-linecap="round"/>
+  <!-- deck -->
+  <line x1="160" y1="672" x2="864" y2="672" stroke="#ffffff" stroke-width="44" stroke-linecap="round"/>
+  <!-- suspension lines -->
+  <line x1="332" y1="560" x2="332" y2="652" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+  <line x1="512" y1="500" x2="512" y2="652" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+  <line x1="692" y1="560" x2="692" y2="652" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+  <!-- two parties: chat dots at each side of the bridge -->
+  <circle cx="232" cy="420" r="88" fill="#ffffff"/>
+  <circle cx="232" cy="420" r="40" fill="#1f6f5c"/>
+  <circle cx="792" cy="420" r="88" fill="#ffffff"/>
+  <circle cx="792" cy="420" r="40" fill="#1f6f5c"/>
+  <!-- spark: agreement -->
+  <circle cx="512" cy="330" r="46" fill="#ffd166"/>
+</svg>

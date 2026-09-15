@@ -1,8 +1,10 @@
 import { Component, NgZone, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { SocialLogin } from '@capgo/capacitor-social-login';
 import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n.service';
+import { isNativeApp } from '../../core/server-base';
 import { DemoFlowComponent } from '../../shared/demo-flow.component';
 import { DemoShotsComponent } from '../../shared/demo-shots.component';
 
@@ -62,7 +64,15 @@ declare const google: {
 
         <div class="google-area" [hidden]="!googleReady()">
           <div class="divider"><span>{{ i18n.t('auth.orDivider') }}</span></div>
-          <div id="googleButton" class="google-button"></div>
+          @if (native) {
+            <!-- Native app: Google blocks its web flow in WebViews; use the system account picker. -->
+            <button class="btn google-native" type="button" (click)="nativeGoogleSignIn()" [disabled]="busy()">
+              <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C41 35.4 44 30.2 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+              {{ i18n.t('auth.googleContinue') }}
+            </button>
+          } @else {
+            <div id="googleButton" class="google-button"></div>
+          }
         </div>
       </div>
 
@@ -79,6 +89,11 @@ declare const google: {
       content: ''; flex: 1; border-block-start: 1px solid var(--color-border);
     }
     .google-button { display: flex; justify-content: center; min-height: 44px; }
+    .google-native {
+      display: flex; align-items: center; justify-content: center; gap: var(--space-2);
+      inline-size: 100%; min-block-size: 44px;
+      border: 1px solid var(--color-border); background: var(--color-bg); font-weight: 600;
+    }
   `,
 })
 export class WelcomePage {
@@ -92,6 +107,7 @@ export class WelcomePage {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly googleReady = signal(false);
+  protected readonly native = isNativeApp();
 
   protected email = '';
   protected displayName = '';
@@ -101,10 +117,33 @@ export class WelcomePage {
     // Google sign-in is optional: render the button only when the server has a client ID.
     this.auth.authConfig().subscribe({
       next: (config) => {
-        if (config.googleClientId) this.setUpGoogle(config.googleClientId);
+        if (!config.googleClientId) return;
+        if (this.native) {
+          void this.setUpNativeGoogle(config.googleClientId);
+        } else {
+          this.setUpGoogle(config.googleClientId);
+        }
       },
       error: () => undefined,
     });
+  }
+
+  /** Native app: the system account picker returns an ID token our backend already verifies. */
+  private async setUpNativeGoogle(webClientId: string): Promise<void> {
+    await SocialLogin.initialize({ google: { webClientId } });
+    this.googleReady.set(true);
+  }
+
+  protected async nativeGoogleSignIn(): Promise<void> {
+    try {
+      const response = await SocialLogin.login({ provider: 'google', options: {} });
+      const idToken = (response.result as { idToken?: string | null }).idToken;
+      if (idToken) {
+        this.zone.run(() => this.onGoogleCredential(idToken));
+      }
+    } catch {
+      // User dismissed the picker — not an error worth showing.
+    }
   }
 
   private setUpGoogle(clientId: string): void {
