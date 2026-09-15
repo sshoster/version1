@@ -103,7 +103,9 @@ const DICT: Record<Lang, Record<string, string>> = {
     'invite.accept': 'הצטרפות לדיון',
     'invite.needAccount': 'כדי להצטרף צריך קודם להיכנס או ליצור חשבון.',
     'invite.expired': 'ההזמנה הזו כבר אינה בתוקף. בקשו קישור חדש ממי שהזמין אתכם.',
-    'invite.alreadyMember': 'את/ה כבר חלק מהדיון הזה 🙂 הקישור מיועד לאדם אחר — פשוט שלחו לו אותו. הדיון עצמו מחכה ברשימת הדיונים שלך.',
+    'invite.alreadyMember': 'החשבון שמחובר כעת כבר חלק מהדיון הזה 🙂 אם ההזמנה מיועדת לך — לחצו על "זה לא החשבון שלי" והתחברו עם החשבון שלכם. אם היא לאדם אחר — פשוט שלחו לו את הקישור.',
+    'invite.signedInAs': 'מחובר/ת כעת בתור {0} ({1}) — ההצטרפות תתבצע עם החשבון הזה',
+    'invite.notMe': 'זה לא החשבון שלי — החלפת חשבון',
     'invite.used': 'ההזמנה הזו כבר נוצלה או בוטלה. בקשו קישור חדש ממי שהזמין אתכם.',
 
     'common.loading': 'רק רגע…',
@@ -499,7 +501,9 @@ const DICT: Record<Lang, Record<string, string>> = {
     'invite.accept': 'Join the discussion',
     'invite.needAccount': 'To join, first sign in or create an account.',
     'invite.expired': 'This invitation is no longer valid. Ask the person who invited you for a new link.',
-    'invite.alreadyMember': "You are already part of this discussion 🙂 The link is meant for someone else — just send it to them. The discussion itself is waiting in your discussions list.",
+    'invite.alreadyMember': 'The account signed in right now is already part of this discussion 🙂 If the invitation is for you — click "Not my account" and sign in with your own account. If it is for someone else, just send them the link.',
+    'invite.signedInAs': 'Currently signed in as {0} ({1}) — joining happens under this account',
+    'invite.notMe': 'Not my account — switch account',
     'invite.used': 'This invitation was already used or cancelled. Ask for a new link.',
 
     'common.loading': 'One moment…',

@@ -24,12 +24,22 @@ import { DemoFlowComponent } from '../../shared/demo-flow.component';
 
           @if (invitation.status === 'PENDING') {
             @if (auth.isAuthenticated()) {
+              <!-- Joining always happens under the SIGNED-IN account — make that unmissable,
+                   so an invitee on a shared browser doesn't accept as someone else. -->
+              <p class="signed-in muted">
+                👤 {{ i18n.t('invite.signedInAs', auth.user()?.displayName ?? '', auth.user()?.email ?? '') }}
+              </p>
               @if (error()) {
                 <div class="error-box" role="alert">{{ error() }}</div>
               }
-              <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="accept()">
-                {{ i18n.t('invite.accept') }}
-              </button>
+              <div class="accept-row">
+                <button class="btn btn-primary" type="button" [disabled]="busy()" (click)="accept()">
+                  {{ i18n.t('invite.accept') }}
+                </button>
+                <button class="btn btn-quiet" type="button" (click)="switchAccount()">
+                  {{ i18n.t('invite.notMe') }}
+                </button>
+              </div>
             } @else {
               <p class="muted">{{ i18n.t('invite.needAccount') }}</p>
               <a class="btn btn-primary" [routerLink]="['/welcome']" [queryParams]="{ returnUrl: currentUrl }">
@@ -49,6 +59,13 @@ import { DemoFlowComponent } from '../../shared/demo-flow.component';
       <app-demo-flow />
     </div>
   `,
+  styles: `
+    .signed-in {
+      background: var(--color-bg); border-radius: var(--radius);
+      padding: var(--space-2) var(--space-3); margin: 0;
+    }
+    .accept-row { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+  `,
 })
 export class AcceptInvitePage {
   protected readonly i18n = inject(I18nService);
@@ -65,6 +82,13 @@ export class AcceptInvitePage {
 
   protected get currentUrl(): string {
     return `/invite/${this.token()}`;
+  }
+
+  /** Shared-browser case: sign out and come back to this invitation with the right account. */
+  protected switchAccount(): void {
+    this.auth.logout();
+    this.error.set(null);
+    void this.router.navigate(['/welcome'], { queryParams: { returnUrl: this.currentUrl } });
   }
 
   constructor() {
