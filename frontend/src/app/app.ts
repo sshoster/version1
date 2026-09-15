@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth.service';
 import { AvatarService } from './core/files.service';
 import { I18nService } from './core/i18n.service';
 import { RoomTool, RoomUiService } from './core/room-ui.service';
+import { RoomEventsService } from './core/room-events.service';
 import { RoomsStore } from './core/rooms-store.service';
 import { AvatarComponent } from './shared/avatar.component';
 
@@ -18,12 +19,18 @@ export class App {
   protected readonly auth = inject(AuthService);
   protected readonly roomUi = inject(RoomUiService);
   protected readonly roomsStore = inject(RoomsStore);
+  private readonly roomEvents = inject(RoomEventsService);
   private readonly avatars = inject(AvatarService);
   private readonly router = inject(Router);
 
   constructor() {
     // Pick up server-side profile changes (e.g. the super-admin flag) on every app start.
     if (this.auth.isAuthenticated()) this.auth.loadMe();
+    // Keep the live channel connected from ANY signed-in page — it powers presence
+    // (you appear online to your meetings while the app is open) and notification badges.
+    effect(() => {
+      if (this.auth.isAuthenticated()) this.roomEvents.watchNotifications();
+    });
   }
 
   protected readonly drawerOpen = signal(false);
