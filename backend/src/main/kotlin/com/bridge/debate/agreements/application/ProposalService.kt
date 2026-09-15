@@ -92,6 +92,7 @@ class ProposalService(
     private val outboxService: OutboxService,
     private val idempotencyService: IdempotencyService,
     private val transactionTemplate: TransactionTemplate,
+    private val sharing: com.bridge.debate.messaging.application.SharingService,
 ) {
     // ---------------- create / revise ----------------
 
@@ -340,9 +341,20 @@ class ProposalService(
             it.updatedAt = now
             proposals.save(it)
         }
+        // An approved proposal joins the approved understandings, but does NOT end the meeting:
+        // the room returns to ACTIVE and the conversation (and further assistant cycles) continue
+        // until the owner explicitly finishes the discussion.
         if (rooms.find(request.roomId)?.status == RoomStatus.AGREEMENT_PENDING_APPROVAL) {
-            lifecycle.transition(request.roomId, RoomStatus.AGREED, ActorType.SYSTEM, null, "all parties approved")
+            lifecycle.transition(request.roomId, RoomStatus.ACTIVE, ActorType.SYSTEM, null, "proposal agreed - discussion continues")
         }
+        val title = versions.findByProposalIdAndRoomIdAndVersion(request.proposalId, request.roomId, request.proposalVersion)?.title
+        sharing.publishSystemNote(
+            request.roomId,
+            buildString {
+                appendLine("🎉 ההצעה ${title?.let { "\"$it\"" } ?: ""} אושרה על ידי כל הצדדים ונוספה להבנות המאושרות.".replace("  ", " "))
+                append("הדיון נשאר פתוח להמשך שיחה — כשמסיימים, מנהל/ת הדיון יכול/ה לסמן שהדיון הסתיים בהסכמה.")
+            },
+        )
     }
 
     // ---------------- reads ----------------

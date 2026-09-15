@@ -42,6 +42,10 @@ export class OutcomesService {
     return this.http.post(`/api/v1/rooms/${roomId}/close`, {});
   }
 
+  finishRoom(roomId: string): Observable<unknown> {
+    return this.http.post(`/api/v1/rooms/${roomId}/finish`, {});
+  }
+
   reopenRoom(roomId: string): Observable<unknown> {
     return this.http.post(`/api/v1/rooms/${roomId}/reopen`, {});
   }

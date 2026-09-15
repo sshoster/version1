@@ -92,6 +92,11 @@ class RoomController(private val roomService: RoomService) {
     fun resume(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser): RoomResponse =
         roomService.lifecycle(roomId, user, RoomStatus.ACTIVE).toResponse()
 
+    /** Owner-only: mark the discussion as finished in agreement (the 🎉 state). */
+    @PostMapping("/{roomId}/finish")
+    fun finish(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser): RoomResponse =
+        roomService.finish(roomId, user).toResponse()
+
     @PostMapping("/{roomId}/close")
     fun close(@PathVariable roomId: String, @AuthenticationPrincipal user: AuthenticatedUser): RoomResponse =
         roomService.lifecycle(roomId, user, RoomStatus.CLOSED).toResponse()

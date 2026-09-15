@@ -468,7 +468,12 @@ class NegotiationOrchestrator(
                 if (result.unresolvedPoints.isEmpty()) appendLine("• (לא זוהו נקודות פתוחות)")
                 result.unresolvedPoints.forEach { appendLine("• $it") }
                 appendLine()
-                append("הסבב הבא של העוזרים ימשיך מהנקודות האלה.")
+                if (result.agreedPoints.isNotEmpty() && result.unresolvedPoints.isEmpty()) {
+                    // Everything the assistants touched is settled — suggest wrapping up.
+                    append("נראה שכל הנקודות סגורות 🙌 — אם סיימתם, מנהל/ת הדיון יכול/ה לסמן שהדיון הסתיים בהסכמה.")
+                } else {
+                    append("הסבב הבא של העוזרים ימשיך מהנקודות האלה.")
+                }
             }
         }
     }

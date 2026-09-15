@@ -38,8 +38,15 @@ class RoomTransitionsTest {
     fun `skipping the state machine is rejected`() {
         assertFalse(RoomTransitions.isAllowed(RoomStatus.DRAFT, RoomStatus.ACTIVE))
         assertFalse(RoomTransitions.isAllowed(RoomStatus.DRAFT, RoomStatus.AGREED))
-        assertFalse(RoomTransitions.isAllowed(RoomStatus.ACTIVE, RoomStatus.AGREED))
         assertFalse(RoomTransitions.isAllowed(RoomStatus.AGREED, RoomStatus.ACTIVE))
         assertFalse(RoomTransitions.isAllowed(RoomStatus.INTAKE, RoomStatus.PROPOSAL_READY))
+    }
+
+    @Test
+    fun `the owner may finish a live discussion in agreement`() {
+        assertTrue(RoomTransitions.isAllowed(RoomStatus.ACTIVE, RoomStatus.AGREED))
+        assertTrue(RoomTransitions.isAllowed(RoomStatus.PROPOSAL_READY, RoomStatus.AGREED))
+        assertTrue(RoomTransitions.isAllowed(RoomStatus.WAITING_FOR_USER, RoomStatus.AGREED))
+        assertTrue(RoomTransitions.isAllowed(RoomStatus.AGREED, RoomStatus.CLOSED))
     }
 }

@@ -27,10 +27,12 @@ object RoomTransitions {
         RoomStatus.INTAKE to setOf(RoomStatus.ACTIVE, RoomStatus.CLOSED),
         RoomStatus.ACTIVE to setOf(
             RoomStatus.WAITING_FOR_USER, RoomStatus.PROPOSAL_READY, RoomStatus.PAUSED, RoomStatus.CLOSED,
+            RoomStatus.AGREED, // owner explicitly finishes the discussion in agreement
         ),
-        RoomStatus.WAITING_FOR_USER to setOf(RoomStatus.ACTIVE, RoomStatus.PAUSED, RoomStatus.CLOSED),
+        RoomStatus.WAITING_FOR_USER to setOf(RoomStatus.ACTIVE, RoomStatus.PAUSED, RoomStatus.CLOSED, RoomStatus.AGREED),
         RoomStatus.PROPOSAL_READY to setOf(
             RoomStatus.AGREEMENT_PENDING_APPROVAL, RoomStatus.ACTIVE, RoomStatus.PAUSED, RoomStatus.CLOSED,
+            RoomStatus.AGREED,
         ),
         RoomStatus.AGREEMENT_PENDING_APPROVAL to setOf(RoomStatus.AGREED, RoomStatus.ACTIVE, RoomStatus.CLOSED),
         RoomStatus.AGREED to setOf(RoomStatus.CLOSED),

@@ -31,6 +31,7 @@ class RoomService(
     private val mongoTemplate: MongoTemplate,
     private val lifecycleService: RoomLifecycleService,
     private val roomPurge: com.bridge.debate.admin.application.RoomPurgeService,
+    private val sharing: com.bridge.debate.messaging.application.SharingService,
 ) {
     @Transactional
     fun create(actor: AuthenticatedUser, title: String, objective: String?): RoomView {
@@ -122,6 +123,20 @@ class RoomService(
             throw com.bridge.debate.shared.errors.ConflictException("Only a closed discussion can be deleted")
         }
         roomPurge.purgeRoom(roomId)
+    }
+
+    /**
+     * The owner marks the discussion as finished in agreement (AGREED). Approving a proposal no
+     * longer ends the meeting by itself — this explicit action does, so "you reached an
+     * agreement 🎉" only appears when the people say they are done.
+     */
+    fun finish(roomId: String, actor: AuthenticatedUser): RoomView {
+        val participant = permissions.requireRole(roomId, actor.userId, ParticipantRole.OWNER)
+        val room = lifecycleService.transition(
+            roomId, RoomStatus.AGREED, com.bridge.debate.audit.domain.ActorType.USER, actor.userId, "finished by the owner",
+        )
+        sharing.publishSystemNote(roomId, "🎉 מנהל/ת הדיון סימנ/ה שהדיון הסתיים בהסכמה. תודה לכל המשתתפים!")
+        return RoomView(room, participant.roles)
     }
 
     /** Reopening a CLOSED discussion is restricted to the owner. */

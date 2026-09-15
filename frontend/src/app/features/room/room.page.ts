@@ -122,6 +122,11 @@ import { TimelineComponent } from './timeline.component';
                     </button>
                   }
                 } @else {
+                  @if (isOwner() && r.status !== 'AGREED') {
+                    <button class="btn btn-primary" type="button" (click)="lifecycle('finish')">
+                      🎉 {{ i18n.t('room.lifecycle.finish') }}
+                    </button>
+                  }
                   <button class="btn btn-quiet" type="button" (click)="lifecycle('pause')">{{ i18n.t('room.lifecycle.pause') }}</button>
                   <button class="btn btn-quiet" type="button" (click)="lifecycle('close')">{{ i18n.t('room.lifecycle.close') }}</button>
                 }
@@ -371,13 +376,15 @@ export class RoomPage {
     });
   }
 
-  protected lifecycle(action: 'pause' | 'resume' | 'close' | 'reopen'): void {
+  protected lifecycle(action: 'pause' | 'resume' | 'close' | 'reopen' | 'finish'): void {
     const id = this.roomId();
+    if (action === 'finish' && !confirm(this.i18n.t('room.lifecycle.finishConfirm'))) return;
     const call =
       action === 'pause' ? this.outcomesService.pauseRoom(id)
         : action === 'resume' ? this.outcomesService.resumeRoom(id)
           : action === 'close' ? this.outcomesService.closeRoom(id)
-            : this.outcomesService.reopenRoom(id);
+            : action === 'finish' ? this.outcomesService.finishRoom(id)
+              : this.outcomesService.reopenRoom(id);
     call.subscribe({ next: () => this.reloadRoom(id), error: () => this.reloadRoom(id) });
   }
 

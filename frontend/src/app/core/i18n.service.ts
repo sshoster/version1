@@ -306,6 +306,8 @@ const DICT: Record<Lang, Record<string, string>> = {
     'room.lifecycle.pause': 'השהיית הדיון',
     'room.lifecycle.resume': 'חידוש הדיון',
     'room.lifecycle.close': 'סגירת הדיון',
+    'room.lifecycle.finish': 'סיום הדיון בהסכמה',
+    'room.lifecycle.finishConfirm': 'לסמן שהדיון הסתיים בהסכמה? הודעת סיכום תפורסם בצ׳אט המשותף ולא יתאפשר להמשיך את השיחה.',
     'room.lifecycle.reopen': 'פתיחת הדיון מחדש',
     'tl.OUTCOME_CREATED': 'נוצר מסמך תוצאה',
 
@@ -725,6 +727,8 @@ const DICT: Record<Lang, Record<string, string>> = {
     'room.lifecycle.pause': 'Pause the discussion',
     'room.lifecycle.resume': 'Resume the discussion',
     'room.lifecycle.close': 'Close the discussion',
+    'room.lifecycle.finish': 'Finish in agreement',
+    'room.lifecycle.finishConfirm': 'Mark this discussion as finished in agreement? A closing note is posted to the shared chat and the conversation can no longer continue.',
     'room.lifecycle.reopen': 'Reopen the discussion',
     'tl.OUTCOME_CREATED': 'A result document was created',
 

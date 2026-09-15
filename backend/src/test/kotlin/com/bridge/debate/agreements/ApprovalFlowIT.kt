@@ -85,8 +85,19 @@ class ApprovalFlowIT : IntegrationTestBase() {
             bob.accessToken,
         )
         assertEquals("APPROVED", json(bobDecision)["status"].asText())
-        assertEquals("AGREED", json(get("/api/v1/rooms/$roomId", alice.accessToken))["status"].asText())
+        // The proposal is agreed, but the MEETING continues (back to ACTIVE) — "you reached an
+        // agreement" now requires the owner's explicit finish action.
+        assertEquals("ACTIVE", json(get("/api/v1/rooms/$roomId", alice.accessToken))["status"].asText())
         assertEquals("AGREED", json(get("/api/v1/rooms/$roomId/proposals/$proposalId", bob.accessToken))["status"].asText())
+
+        // The agreement is announced in the common chat as a system note.
+        val chat = json(get("/api/v1/rooms/$roomId/shared-items", bob.accessToken))
+        assertTrue(chat.any { it["origin"].asText() == "SYSTEM_GENERATED" && it["text"].asText().contains("אושרה") })
+
+        // Only the owner can finish the discussion; then the room is AGREED.
+        assertEquals(403, post("/api/v1/rooms/$roomId/finish", null, bob.accessToken).statusCode.value())
+        assertEquals(200, post("/api/v1/rooms/$roomId/finish", null, alice.accessToken).statusCode.value())
+        assertEquals("AGREED", json(get("/api/v1/rooms/$roomId", alice.accessToken))["status"].asText())
 
         // Audit + timeline record the whole path (test 22).
         val audit = json(get("/api/v1/rooms/$roomId/audit", alice.accessToken))
