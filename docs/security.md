@@ -51,6 +51,18 @@ column shows where each control landed; §9 lists the honest remaining gaps.
   session cannot silently lock the owner out. Minimum password length is 5 characters — an
   explicit owner decision favoring ease of use; Argon2id hashing, rate-limited login, and
   generic auth errors remain the guessing defenses.
+- Super-admin access (`/api/v1/admin/**`) is an env-configured email allowlist
+  (`SUPER_ADMIN_EMAILS`) checked per request — nothing in the database can grant it, and
+  non-admins receive 404 so the area's existence is not advertised. Admin user deletion is a
+  SOFT delete: sign-in is blocked (password scrambled, sessions revoked, Google/refresh
+  refused) but the identity stays; re-registration with the same email — proven by password
+  choice or a verified Google token — revives the same user id and its room participations.
+- The platform golden rules are injected into every LLM system prompt by a provider decorator;
+  they explicitly outrank in-discussion content, adding a standing prompt-injection defense on
+  top of the DATA-not-instructions framing in the prompts.
+- Room deletion: a room admin may permanently purge only a CLOSED discussion (close first,
+  delete second — no live conversation can vanish under its participants); platform admins can
+  purge any room. Both use the same cascade (all room-scoped collections + stored files).
 - Passwords: Argon2id via Spring Security's encoder.
 - All auth state validated server-side per request; WebSocket handshake authenticates via the same JWT.
 

@@ -98,7 +98,13 @@ time, errors, the outbox/idempotency primitives, and domain-event plumbing.
 Module responsibilities:
 
 - **identity** — users, registration/login, optional Google sign-in (server-verified ID tokens),
-  account profile edit + password change, avatars, JWT issuance & refresh rotation.
+  account profile edit + password change, avatars, JWT issuance & refresh rotation, super-admin
+  user lifecycle (create/edit/suspend/soft-delete; a soft-deleted identity revives on
+  re-registration with the same email, keeping all room participations).
+- **admin** — the super-admin surface (email-allowlisted): room listing and cascade purge over
+  every room-scoped collection plus stored file objects, working at the collection level so no
+  module boundary is crossed. Room admins reuse the same purge for deleting their own CLOSED
+  discussions.
 - **discussion** — `DiscussionRoom` aggregate and its state machine.
 - **participants** — participants, invitations (hashed single-use tokens, expiry, revocation), role assignment.
 - **permissions** — the single authorization service: role × scope × resource checks used by every other module; audience-snapshot resolution.
@@ -107,8 +113,8 @@ Module responsibilities:
 - **agreements** — proposals, proposal versions, approval requests, approvals, and the three outcome artifacts (AI summary, deterministic approved understandings, AI agreement draft).
 - **files** — attachments (≤50MB, allowlisted types) following the message trust model (private → explicit audience share → withdraw-not-delete), behind a `FileStorage` port with local-disk and S3-compatible (AWS S3 / Cloudflare R2 / MinIO) implementations; also backs profile avatars.
 - **audit** — append-only hash-chained `AuditEvent` writer + the authorized plain-language timeline and technical audit read models.
-- **notifications** — in-app notifications with per-room unread counts (member-wide for room activity, audience-scoped for private events, actor excluded; live pings on `/user/queue/notifications`), WebSocket event fan-out (room topics + audience-scoped user queues), per-room presence tracking (online/recently-active, in-memory), and the `EmailSender` port (SMTP / Brevo HTTPS).
-- **llm** — `LlmProvider` SPI with the OpenAI adapter (retries, circuit breaker, JSON mode for structured calls) and the deterministic `FakeLlmProvider`; versioned prompt templates (`prompts/{draft,negotiation,summary,agreement}/v1.md`); budgets enforced by the negotiation orchestrator.
+- **notifications** — in-app notifications with per-room unread counts (member-wide for room activity, audience-scoped for private events, actor excluded; live pings on `/user/queue/notifications`), WebSocket event fan-out (room topics + audience-scoped user queues), per-room presence tracking (online/recently-active, in-memory), and the `EmailSender` port (SMTP / Brevo HTTPS, with attachments). All sends go through the async `EmailDispatcher` on a dedicated executor — never on a request thread.
+- **llm** — `LlmProvider` SPI with the OpenAI adapter (retries, circuit breaker, JSON mode for structured calls) and the deterministic `FakeLlmProvider`; versioned prompt templates (`prompts/{draft,negotiation,summary,agreement}/v1.md`); budgets enforced by the negotiation orchestrator. A `@Primary` `GoldenRulesEnforcingProvider` decorator prepends the platform golden rules (stored in `platform_settings`, editable only via the super-admin API, cached ~30s) to EVERY system prompt — one choke point no call site can bypass.
 
 ## 4. Room state machine
 
