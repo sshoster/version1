@@ -39,6 +39,7 @@ class NegotiationContextBuilder {
         answeredQuestions: List<Question>,
         currentTurn: Int,
         previousCycle: RoundResult? = null,
+        correction: String? = null,
     ): String = buildString {
         appendLine("DISCUSSION_TITLE: ${room.title}")
         appendLine("OBJECTIVE: ${room.objective ?: "(none provided)"}")
@@ -87,5 +88,12 @@ class NegotiationContextBuilder {
         appendLine()
         appendLine("PROPOSAL_ON_TABLE: ${if (transcript.any { it.proposal != null }) "yes" else "no"}")
         appendLine("CURRENT_TURN: $currentTurn")
+        if (correction != null) {
+            appendLine()
+            appendLine("REJECTED_PREVIOUS_ATTEMPT: your previous reply was rejected by the server validator:")
+            appendLine("  \"${correction.replace('\n', ' ')}\"")
+            appendLine("Reply again now. Output ONLY the exact JSON schema, complete and well-formed,")
+            appendLine("and cite only ids that appear in SHARED_FACTS.")
+        }
     }
 }

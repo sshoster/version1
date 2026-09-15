@@ -194,6 +194,12 @@ class NegotiationOrchestrator(
             val parties = partyUserIds(roomId)
             if (parties.size != 2) return failRun(runId, roomId, "party set changed")
 
+            // One corrective retry per rejection: model output glitches (truncation, schema
+            // slips, a mis-cited fact id) are usually transient — feed the validator's reason
+            // back once before giving up on the whole run.
+            var correction: String? = null
+            var rejections = 0
+
             while (true) {
                 val run = runs.findById(runId).orElse(null) ?: return
                 if (run.status != RunStatus.RUNNING) return // paused/stopped externally
@@ -215,10 +221,18 @@ class NegotiationOrchestrator(
                 val partyUserId = ordered[(turnNumber - 1) % 2]
 
                 val outcome = try {
-                    produceTurn(run, roomId, partyUserId, turnNumber)
+                    produceTurn(run, roomId, partyUserId, turnNumber, correction).also {
+                        correction = null
+                        rejections = 0
+                    }
                 } catch (e: TurnOutputException) {
                     log.warn("Run {} turn {} rejected: {}", runId, turnNumber, e.message)
-                    return failRun(runId, roomId, "invalid model output", RunStopReason.SAFETY)
+                    rejections++
+                    if (rejections >= 2) {
+                        return failRun(runId, roomId, "invalid model output", RunStopReason.SAFETY)
+                    }
+                    correction = e.message
+                    continue
                 } catch (e: Exception) {
                     // Provider failure: domain state stays clean and the room remains usable (test 17).
                     log.warn("Run {} provider failure on turn {}: {}", runId, turnNumber, e.message)
@@ -245,7 +259,13 @@ class NegotiationOrchestrator(
         data class Stop(val reason: RunStopReason) : TurnOutcome
     }
 
-    private fun produceTurn(run: NegotiationRun, roomId: String, partyUserId: String, turnNumber: Int): TurnOutcome {
+    private fun produceTurn(
+        run: NegotiationRun,
+        roomId: String,
+        partyUserId: String,
+        turnNumber: Int,
+        correction: String? = null,
+    ): TurnOutcome {
         val room = rooms.find(roomId) ?: throw IllegalStateException("room disappeared")
         val participant = participants.activeParticipant(roomId, partyUserId)
             ?: throw IllegalStateException("party left the room")
@@ -260,6 +280,9 @@ class NegotiationOrchestrator(
                 LlmRequest(
                     templateId = NegotiationContextBuilder.TEMPLATE_ID,
                     expectsJson = true,
+                    // A full turn (message + proposal + questions with options, in Hebrew) does
+                    // not fit the 1024 default; a truncated response is invalid JSON -> SAFETY.
+                    maxOutputTokens = 2048,
                     system = contextBuilder.systemPrompt(room, participant.displayName),
                     user = contextBuilder.userPrompt(
                         room = room,
@@ -270,6 +293,7 @@ class NegotiationOrchestrator(
                         answeredQuestions = answered,
                         currentTurn = turnNumber,
                         previousCycle = previousCycle(roomId, run.id),
+                        correction = correction,
                     ),
                 ),
             )
