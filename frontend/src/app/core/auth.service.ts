@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { AuthResponse, UserResponse } from './models';
+import { sessionStore } from './session-store';
 
 const ACCESS_TOKEN_KEY = 'cg.accessToken';
 const REFRESH_TOKEN_KEY = 'cg.refreshToken';
@@ -40,7 +41,7 @@ export class AuthService {
   }
 
   refresh(): Observable<AuthResponse> {
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY) ?? '';
+    const refreshToken = sessionStore.get(REFRESH_TOKEN_KEY) ?? '';
     return this.http
       .post<AuthResponse>('/api/v1/auth/refresh', { refreshToken })
       .pipe(tap((response) => this.store(response)));
@@ -50,7 +51,7 @@ export class AuthService {
   loadMe(): void {
     this.http.get<UserResponse>('/api/v1/users/me').subscribe({
       next: (user) => {
-        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        sessionStore.set(USER_KEY, JSON.stringify(user));
         this.userSignal.set(user);
       },
       error: () => undefined,
@@ -61,7 +62,7 @@ export class AuthService {
   updateProfile(displayName: string): Observable<UserResponse> {
     return this.http.patch<UserResponse>('/api/v1/users/me', { displayName }).pipe(
       tap((user) => {
-        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        sessionStore.set(USER_KEY, JSON.stringify(user));
         this.userSignal.set(user);
       }),
     );
@@ -72,31 +73,31 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    sessionStore.remove(ACCESS_TOKEN_KEY);
+    sessionStore.remove(REFRESH_TOKEN_KEY);
+    sessionStore.remove(USER_KEY);
     this.userSignal.set(null);
   }
 
   accessToken(): string | null {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
+    return sessionStore.get(ACCESS_TOKEN_KEY);
   }
 
   hasRefreshToken(): boolean {
-    return localStorage.getItem(REFRESH_TOKEN_KEY) !== null;
+    return sessionStore.get(REFRESH_TOKEN_KEY) !== null;
   }
 
   private store(response: AuthResponse): void {
-    localStorage.setItem(ACCESS_TOKEN_KEY, response.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, response.refreshToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+    sessionStore.set(ACCESS_TOKEN_KEY, response.accessToken);
+    sessionStore.set(REFRESH_TOKEN_KEY, response.refreshToken);
+    sessionStore.set(USER_KEY, JSON.stringify(response.user));
     this.userSignal.set(response.user);
   }
 }
 
 function readStoredUser(): UserResponse | null {
   try {
-    const raw = localStorage.getItem(USER_KEY);
+    const raw = sessionStore.get(USER_KEY);
     return raw ? (JSON.parse(raw) as UserResponse) : null;
   } catch {
     return null;
