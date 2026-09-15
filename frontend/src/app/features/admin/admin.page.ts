@@ -52,7 +52,7 @@ import { AdminRoomView, AdminUserView } from '../../core/models';
             </thead>
             <tbody>
               @for (user of users(); track user.id) {
-                <tr [class.suspended]="user.suspended">
+                <tr [class.suspended]="user.suspended || user.deleted">
                   <td>
                     @if (editingId() === user.id) {
                       <input type="text" name="editName-{{ user.id }}" [(ngModel)]="editName" />
@@ -63,9 +63,11 @@ import { AdminRoomView, AdminUserView } from '../../core/models';
                     }
                   </td>
                   <td dir="ltr" class="email">{{ user.email }}</td>
-                  <td>{{ user.suspended ? i18n.t('admin.suspended') : i18n.t('admin.active') }}</td>
+                  <td>{{ user.deleted ? i18n.t('admin.deleted') : user.suspended ? i18n.t('admin.suspended') : i18n.t('admin.active') }}</td>
                   <td class="actions">
-                    @if (editingId() === user.id) {
+                    @if (user.deleted) {
+                      <span class="muted small">{{ i18n.t('admin.deletedHint') }}</span>
+                    } @else if (editingId() === user.id) {
                       <button class="btn btn-primary mini" type="button" [disabled]="busy()" (click)="saveEdit(user)">{{ i18n.t('account.save') }}</button>
                       <button class="btn btn-quiet mini" type="button" (click)="editingId.set(null)">{{ i18n.t('common.close') }}</button>
                     } @else {

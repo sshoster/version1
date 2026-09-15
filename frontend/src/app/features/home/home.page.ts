@@ -167,7 +167,11 @@ export class HomePage {
       next: (request) => {
         this.joinBusy.set(false);
         this.joinCode = '';
-        this.joinMessage.set(this.i18n.t('join.requested'));
+        this.joinMessage.set(
+          request.ownerName
+            ? this.i18n.t('join.requestedTo', request.ownerName, request.ownerEmail)
+            : this.i18n.t('join.requested'),
+        );
         this.myRequests.update((current) =>
           current.some((r) => r.id === request.id) ? current : [request, ...current],
         );

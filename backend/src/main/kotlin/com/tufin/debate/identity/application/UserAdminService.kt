@@ -18,6 +18,7 @@ data class AdminUserView(
     val email: String,
     val displayName: String,
     val suspended: Boolean,
+    val deleted: Boolean,
     val createdAt: Instant,
 )
 
@@ -97,20 +98,24 @@ class UserAdminService(
     }
 
     /**
-     * Deletes the ACCOUNT: sign-in becomes impossible and all sessions end. Room content the
-     * person authored stays — messages, approvals, and the hash-chained audit are immutable
-     * records of what the other participants relied on (trust-model invariant).
+     * SOFT-deletes the account: sign-in becomes impossible and all sessions end, but the
+     * document (and its id) stays. Room content the person authored stays too — messages,
+     * approvals, and the hash-chained audit are immutable records (trust-model invariant).
+     * Registering again with the same email revives the same identity, meetings included.
      */
     fun delete(userId: String, actorUserId: String) {
         if (userId == actorUserId) throw ConflictException("You cannot delete your own account")
         val user = find(userId)
+        if (user.deletedAt != null) throw ConflictException("This account is already deleted")
+        user.deletedAt = Instant.now()
+        user.passwordHash = passwordEncoder.encode(java.util.UUID.randomUUID().toString()) // unguessable
+        users.save(user)
         refreshTokens.deleteByUserId(userId)
-        users.delete(user)
-        log.info("User {} deleted by admin {}", userId, actorUserId)
+        log.info("User {} soft-deleted by admin {}", userId, actorUserId)
     }
 
     private fun find(userId: String): User =
         users.findById(userId).orElseThrow { NotFoundException("This user was not found") }
 
-    private fun User.toView() = AdminUserView(id, email, displayName, suspendedAt != null, createdAt)
+    private fun User.toView() = AdminUserView(id, email, displayName, suspendedAt != null, deletedAt != null, createdAt)
 }

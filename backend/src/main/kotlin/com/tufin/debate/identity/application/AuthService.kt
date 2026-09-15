@@ -43,6 +43,14 @@ class AuthService(
 
     fun register(email: String, displayName: String, password: String): TokenPair {
         val normalizedEmail = email.trim().lowercase()
+
+        // A soft-deleted account registering again revives the SAME identity — their room
+        // participations reference that user id, so every meeting reappears as it was.
+        users.findByEmail(normalizedEmail)?.let { existing ->
+            if (existing.deletedAt == null) throw ConflictException("This email address is already registered")
+            return issueTokens(revive(existing, displayName.trim(), password))
+        }
+
         val user = User(
             id = Ids.newId(),
             email = normalizedEmail,
@@ -58,6 +66,14 @@ class AuthService(
         return issueTokens(user)
     }
 
+    private fun revive(user: User, displayName: String, password: String?): User {
+        user.deletedAt = null
+        user.suspendedAt = null
+        if (displayName.isNotBlank()) user.displayName = displayName
+        password?.let { user.passwordHash = passwordEncoder.encode(it) }
+        return users.save(user)
+    }
+
     fun login(email: String, password: String): TokenPair {
         val user = users.findByEmail(email.trim().lowercase())
         // Same generic error for unknown email and wrong password (no account enumeration).
@@ -70,6 +86,8 @@ class AuthService(
 
     private fun ensureActive(user: User) {
         if (user.suspendedAt != null) throw UnauthorizedException("This account is suspended")
+        // A deleted account cannot use existing credentials — only re-registration revives it.
+        if (user.deletedAt != null) throw UnauthorizedException("The email or password is incorrect")
     }
 
     /**
@@ -84,7 +102,11 @@ class AuthService(
             throw UnauthorizedException("This Google account's email address is not verified")
         }
         val email = identity.email.trim().lowercase()
-        val user = users.findByEmail(email) ?: createGoogleUser(email, identity.displayName)
+        var user = users.findByEmail(email) ?: createGoogleUser(email, identity.displayName)
+        if (user.deletedAt != null) {
+            // Google has proven email ownership — signing in again counts as re-registration.
+            user = revive(user, user.displayName, password = null)
+        }
         ensureActive(user)
         return issueTokens(user)
     }

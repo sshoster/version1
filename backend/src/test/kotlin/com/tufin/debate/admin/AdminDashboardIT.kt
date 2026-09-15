@@ -92,6 +92,33 @@ class AdminDashboardIT : IntegrationTestBase() {
     }
 
     @Test
+    fun `a deleted user who registers again gets the same identity and meetings back`() {
+        val person = registerUser("Phoenix")
+        val roomId = json(post("/api/v1/rooms", mapOf("title" to "Phoenix room"), person.accessToken))["id"].asText()
+
+        val admin = adminToken()
+        rest.exchange("/api/v1/admin/users/${person.userId}", org.springframework.http.HttpMethod.DELETE,
+            org.springframework.http.HttpEntity<Void>(jsonHeaders(admin)), String::class.java)
+
+        // Deleted: no sign-in with the old password.
+        assertEquals(401, post("/api/v1/auth/login", mapOf("email" to person.email, "password" to person.password)).statusCode.value())
+
+        // Re-registering with the same email revives the SAME identity…
+        val reborn = post(
+            "/api/v1/auth/register",
+            mapOf("email" to person.email, "displayName" to "Phoenix Reborn", "password" to "fresh-start-1"),
+        )
+        assertEquals(201, reborn.statusCode.value(), reborn.body)
+        val rebornBody = json(reborn)
+        assertEquals(person.userId, rebornBody["user"]["id"].asText(), "same user id — participations stay linked")
+
+        // …and the meetings are right there as they were.
+        val token = rebornBody["accessToken"].asText()
+        assertEquals(200, get("/api/v1/rooms/$roomId", token).statusCode.value())
+        assertTrue(json(get("/api/v1/rooms", token)).any { it["id"].asText() == roomId })
+    }
+
+    @Test
     fun `deleting a room purges it for its members`() {
         val alice = registerUser("Alice")
         val roomId = json(post("/api/v1/rooms", mapOf("title" to "Doomed room"), alice.accessToken))["id"].asText()

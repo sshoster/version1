@@ -32,6 +32,9 @@ data class JoinRequestView(
     val roomTitle: String,
     val displayName: String,
     val status: JoinRequestStatus,
+    /** The discussion admin (room creator) who decides — shown to the requester for follow-up. */
+    val ownerName: String,
+    val ownerEmail: String,
     val createdAt: Instant,
 )
 
@@ -51,7 +54,10 @@ class JoinRequestService(
     private val lifecycle: RoomLifecycleService,
     private val auditService: AuditService,
     private val outboxService: OutboxService,
+    private val emailSender: com.tufin.debate.notifications.application.EmailSender,
+    @param:org.springframework.beans.factory.annotation.Value("\${app.invitations.base-url}") private val baseUrl: String,
 ) {
+    private val log = org.slf4j.LoggerFactory.getLogger(javaClass)
     companion object {
         private val GRANTABLE = setOf(ParticipantRole.PARTY, ParticipantRole.ADVISOR, ParticipantRole.OBSERVER)
     }
@@ -146,6 +152,7 @@ class JoinRequestService(
         )
 
         maybeAdvanceToIntake(roomId)
+        notifyDecision(request, approved = true)
         return request.toView(rooms.find(roomId)?.title ?: "")
     }
 
@@ -159,10 +166,46 @@ class JoinRequestService(
             roomId, "JOIN_REQUEST_DECIDED",
             mapOf("resourceId" to requestId, "audienceUserIds" to listOf(request.userId), "actorUserId" to actor.userId),
         )
+        notifyDecision(request, approved = false)
         return request.toView(rooms.find(roomId)?.title ?: "")
     }
 
     // ---------------- helpers ----------------
+
+    /** Emails the requester about the decision — best-effort, a mail failure never blocks it. */
+    private fun notifyDecision(request: JoinRequest, approved: Boolean) {
+        try {
+            val email = userDirectory.emailsByIds(listOf(request.userId))[request.userId] ?: return
+            val room = rooms.find(request.roomId)
+            val title = room?.title ?: ""
+            val roomUrl = "${baseUrl.trimEnd('/')}/rooms/${request.roomId}"
+            val ownerName = room?.let { directory.activeParticipant(request.roomId, it.ownerUserId)?.displayName }.orEmpty()
+            val (subject, body) = if (approved) {
+                "Bridge AI - Your join request was approved" to """
+                    |שלום ${request.displayName},
+                    |הבקשה שלך להצטרף לדיון "$title" אושרה 🎉
+                    |כניסה לדיון: $roomUrl
+                    |
+                    |Hello ${request.displayName},
+                    |Your request to join the discussion "$title" was approved 🎉
+                    |Open the discussion: $roomUrl
+                """.trimMargin()
+            } else {
+                "Bridge AI - Update on your join request" to """
+                    |שלום ${request.displayName},
+                    |הבקשה שלך להצטרף לדיון "$title" לא אושרה הפעם.
+                    |לשאלות אפשר לפנות אל מנהל/ת הדיון${if (ownerName.isNotBlank()) " $ownerName" else ""}.
+                    |
+                    |Hello ${request.displayName},
+                    |Your request to join the discussion "$title" was not approved this time.
+                    |For questions, contact the discussion admin${if (ownerName.isNotBlank()) " $ownerName" else ""}.
+                """.trimMargin()
+            }
+            emailSender.send(email, subject, body.replace("\n", "<br/>"), body)
+        } catch (e: Exception) {
+            log.warn("Could not send join-request decision email (decision already recorded)", e)
+        }
+    }
 
     private fun pending(roomId: String, requestId: String): JoinRequest {
         val request = requests.findByIdAndRoomId(requestId, roomId)
@@ -196,6 +239,11 @@ class JoinRequestService(
         }
     }
 
-    private fun JoinRequest.toView(roomTitle: String) =
-        JoinRequestView(id, roomId, roomTitle, displayName, status, createdAt)
+    private fun JoinRequest.toView(roomTitle: String): JoinRequestView {
+        // The requester is told WHO decides (the room's creator) and how to reach them.
+        val room = rooms.find(roomId)
+        val ownerName = room?.let { directory.activeParticipant(roomId, it.ownerUserId)?.displayName }.orEmpty()
+        val ownerEmail = room?.let { userDirectory.emailsByIds(listOf(it.ownerUserId))[it.ownerUserId] }.orEmpty()
+        return JoinRequestView(id, roomId, roomTitle, displayName, status, ownerName, ownerEmail, createdAt)
+    }
 }

@@ -22,6 +22,7 @@ export interface AdminUserView {
   email: string;
   displayName: string;
   suspended: boolean;
+  deleted: boolean;
   createdAt: string;
 }
 
@@ -65,6 +66,8 @@ export interface JoinRequestView {
   roomTitle: string;
   displayName: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  ownerName: string;
+  ownerEmail: string;
   createdAt: string;
 }
 
