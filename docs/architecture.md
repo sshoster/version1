@@ -10,7 +10,7 @@ the delivered state.
 ## 1. Repository state and monorepo plan
 
 The repository currently contains an IntelliJ-generated Gradle/Java placeholder (`build.gradle.kts`,
-`settings.gradle.kts`, `src/main/java/com/tufin/Main.java`, Gradle 9.3 wrapper). There is no product code to
+`settings.gradle.kts`, `src/main/java/com/bridge/Main.java`, Gradle 9.3 wrapper). There is no product code to
 preserve, so the repo will be restructured as a monorepo in Phase 1:
 
 ```
@@ -57,7 +57,7 @@ created. The Gradle 9.3 wrapper is kept.
 
 ## 3. Modular monolith — bounded modules
 
-One Gradle module (`backend`), boundaries enforced as Kotlin packages under `com.tufin.debate.*` with ArchUnit
+One Gradle module (`backend`), boundaries enforced as Kotlin packages under `com.bridge.debate.*` with ArchUnit
 rules (a module's `domain`/`application` may not depend on another module's `infrastructure`; only `shared` is
 freely importable; cross-module calls go through application services or domain events).
 

@@ -3,7 +3,7 @@
     <envs>
       <env name="SPRING_PROFILES_ACTIVE" value="local" />
     </envs>
-    <option name="MAIN_CLASS_NAME" value="com.tufin.debate.DebateApplicationKt" />
+    <option name="MAIN_CLASS_NAME" value="com.bridge.debate.DebateApplicationKt" />
     <module name="debate.backend.main" />
     <method v="2">
       <option name="Make" enabled="true" />

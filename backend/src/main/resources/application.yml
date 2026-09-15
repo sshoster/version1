@@ -34,7 +34,7 @@ spring:
       "[mail.smtp.writetimeout]": 10000
 
 mongock:
-  migration-scan-package: com.tufin.debate.infra.migrations
+  migration-scan-package: com.bridge.debate.infra.migrations
 
 server:
   port: ${SERVER_PORT:8080}

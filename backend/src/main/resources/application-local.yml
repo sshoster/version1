@@ -3,4 +3,4 @@
 # (see JwtSecretProvider); everything else still comes from the environment.
 logging:
   level:
-    com.tufin.debate: DEBUG
+    com.bridge.debate: DEBUG
