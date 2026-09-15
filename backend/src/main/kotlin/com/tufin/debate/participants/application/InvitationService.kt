@@ -67,6 +67,8 @@ class InvitationService(
     private val outboxService: OutboxService,
     private val idempotencyService: IdempotencyService,
     private val notifier: InvitationNotifier,
+    private val userDirectory: com.tufin.debate.identity.application.UserDirectory,
+    private val joinRequests: com.tufin.debate.participants.domain.JoinRequestRepository,
     @param:Value("\${app.invitations.base-url}") private val baseUrl: String,
     @param:Value("\${app.invitations.expiry-days:7}") private val expiryDays: Long,
     private val transactionTemplate: org.springframework.transaction.support.TransactionTemplate,
@@ -116,6 +118,16 @@ class InvitationService(
             throw BadRequestException("People can be invited as a participant, advisor, or viewer")
         }
         val room = rooms.find(roomId) ?: throw NotFoundException("This discussion was not found")
+
+        // One identity, one entry: an email that already belongs to an active member cannot be
+        // re-invited, and re-inviting the same address replaces the older pending invitation.
+        val normalizedEmail = email?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        if (normalizedEmail != null) {
+            if (normalizedEmail in activeMemberEmails(roomId)) {
+                throw ConflictException("This person is already part of the discussion")
+            }
+            supersedePendingInvitations(roomId, normalizedEmail, excludeInvitationId = null)
+        }
 
         val rawToken = newToken()
         val now = Instant.now()
@@ -211,6 +223,13 @@ class InvitationService(
         invitation.updatedAt = Instant.now()
         invitations.save(invitation)
 
+        // The person is in — clear their other pending entries so they never appear twice:
+        // duplicate email invitations and any pending join-by-code request.
+        supersedePendingInvitations(invitation.roomId, actor.email.trim().lowercase(), excludeInvitationId = invitation.id)
+        joinRequests.findByRoomIdAndUserIdAndStatus(
+            invitation.roomId, actor.userId, com.tufin.debate.participants.domain.JoinRequestStatus.PENDING,
+        )?.let { joinRequests.delete(it) }
+
         auditService.append(
             roomId = invitation.roomId,
             actorType = ActorType.USER,
@@ -262,7 +281,26 @@ class InvitationService(
 
     fun listForRoom(roomId: String, actor: AuthenticatedUser): List<Invitation> {
         permissions.requireRole(roomId, actor.userId, ParticipantRole.OWNER)
+        // Hide stale pendings for people who are already in (covers pre-fix historical data too).
+        val memberEmails = activeMemberEmails(roomId)
         return invitations.findByRoomIdOrderByCreatedAtDesc(roomId)
+            .filterNot { it.status == InvitationStatus.PENDING && it.email != null && it.email in memberEmails }
+    }
+
+    /** Emails (lowercased) of the room's active participants. */
+    private fun activeMemberEmails(roomId: String): Set<String> =
+        userDirectory.emailsByIds(directory.activeParticipants(roomId).map { it.userId })
+            .values.map { it.trim().lowercase() }.toSet()
+
+    /** Revokes every other PENDING invitation in the room addressed to the same email. */
+    private fun supersedePendingInvitations(roomId: String, email: String, excludeInvitationId: String?) {
+        invitations.findByRoomIdOrderByCreatedAtDesc(roomId)
+            .filter { it.id != excludeInvitationId && it.status == InvitationStatus.PENDING && it.email == email }
+            .forEach { stale ->
+                stale.status = InvitationStatus.REVOKED
+                stale.updatedAt = Instant.now()
+                invitations.save(stale)
+            }
     }
 
     private fun maybeAdvanceToIntake(roomId: String) {

@@ -50,6 +50,55 @@ class JoinRequestFlowIT : IntegrationTestBase() {
     }
 
     @Test
+    fun `one identity appears once no matter how they were invited or joined`() {
+        val alice = registerUser("Alice")
+        val bob = registerUser("Bob")
+        val room = json(post("/api/v1/rooms", mapOf("title" to "Dedup room"), alice.accessToken))
+        val roomId = room["id"].asText()
+
+        // Inviting the same email twice keeps only the newest pending invitation.
+        post("/api/v1/rooms/$roomId/invitations", mapOf("role" to "PARTY", "email" to bob.email), alice.accessToken)
+        post("/api/v1/rooms/$roomId/invitations", mapOf("role" to "PARTY", "email" to bob.email), alice.accessToken)
+        val pendingBefore = json(get("/api/v1/rooms/$roomId/invitations", alice.accessToken))
+            .filter { it["status"].asText() == "PENDING" && it["email"].asText() == bob.email }
+        assertEquals(1, pendingBefore.size, "re-inviting supersedes the older pending invitation")
+
+        // Bob also has a pending join-by-code request… then joins via the invitation instead.
+        post("/api/v1/join-requests", mapOf("code" to room["joinCode"].asText()), bob.accessToken)
+        val invite = json(post("/api/v1/rooms/$roomId/invitations", mapOf("role" to "PARTY", "email" to bob.email), alice.accessToken))
+        post("/api/v1/invitations/${invite["token"].asText()}/accept", null, bob.accessToken)
+
+        // No leftovers: no pending invitation for his email, no pending join request, one participant.
+        val pendingAfter = json(get("/api/v1/rooms/$roomId/invitations", alice.accessToken))
+            .filter { it["status"].asText() == "PENDING" }
+        assertEquals(0, pendingAfter.size, "joining clears every pending entry for that identity")
+        assertEquals(0, json(get("/api/v1/rooms/$roomId/join-requests", alice.accessToken)).size())
+        assertEquals(0, json(get("/api/v1/join-requests/mine", bob.accessToken)).size())
+        val bobs = json(get("/api/v1/rooms/$roomId/participants", alice.accessToken))
+            .count { it["userId"].asText() == bob.userId }
+        assertEquals(1, bobs)
+
+        // Inviting an email that already belongs to a member is refused outright.
+        assertEquals(
+            409,
+            post("/api/v1/rooms/$roomId/invitations", mapOf("role" to "PARTY", "email" to bob.email), alice.accessToken)
+                .statusCode.value(),
+        )
+
+        // The reverse route: Carol is invited by EMAIL but joins via CODE — approving the join
+        // request revokes her pending email invitation, so she never appears twice.
+        val carol = registerUser("Carol")
+        post("/api/v1/rooms/$roomId/invitations", mapOf("role" to "PARTY", "email" to carol.email), alice.accessToken)
+        val carolRequest = json(post("/api/v1/join-requests", mapOf("code" to room["joinCode"].asText()), carol.accessToken))
+        post("/api/v1/rooms/$roomId/join-requests/${carolRequest["id"].asText()}/approve", mapOf("role" to "PARTY"), alice.accessToken)
+
+        val carolPending = json(get("/api/v1/rooms/$roomId/invitations", alice.accessToken))
+            .filter { it["status"].asText() == "PENDING" && it["email"].asText() == carol.email }
+        assertEquals(0, carolPending.size, "approval via code revokes the pending email invitation")
+        assertEquals(200, get("/api/v1/rooms/$roomId", carol.accessToken).statusCode.value())
+    }
+
+    @Test
     fun `rejection records the decision without granting access`() {
         val alice = registerUser("Alice")
         val mallory = registerUser("Mallory")

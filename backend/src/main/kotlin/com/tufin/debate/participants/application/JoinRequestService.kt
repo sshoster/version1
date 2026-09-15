@@ -7,6 +7,8 @@ import com.tufin.debate.discussion.application.RoomLifecycleService
 import com.tufin.debate.discussion.domain.JoinCodes
 import com.tufin.debate.discussion.domain.RoomStatus
 import com.tufin.debate.identity.application.AuthenticatedUser
+import com.tufin.debate.identity.application.UserDirectory
+import com.tufin.debate.participants.domain.InvitationStatus
 import com.tufin.debate.participants.domain.JoinRequest
 import com.tufin.debate.participants.domain.JoinRequestRepository
 import com.tufin.debate.participants.domain.JoinRequestStatus
@@ -41,6 +43,8 @@ data class JoinRequestView(
 class JoinRequestService(
     private val requests: JoinRequestRepository,
     private val participants: ParticipantRepository,
+    private val invitations: com.tufin.debate.participants.infrastructure.InvitationRepository,
+    private val userDirectory: UserDirectory,
     private val directory: ParticipantDirectory,
     private val rooms: RoomDirectory,
     private val permissions: PermissionsService,
@@ -113,6 +117,18 @@ class JoinRequestService(
             )
         }
         decide(request, actor, JoinRequestStatus.APPROVED, role)
+
+        // The person is in — revoke any pending EMAIL invitation addressed to them, so the
+        // participants panel never shows the same identity twice (member + waiting invitation).
+        userDirectory.emailsByIds(listOf(request.userId))[request.userId]?.trim()?.lowercase()?.let { email ->
+            invitations.findByRoomIdOrderByCreatedAtDesc(roomId)
+                .filter { it.status == InvitationStatus.PENDING && it.email == email }
+                .forEach { stale ->
+                    stale.status = InvitationStatus.REVOKED
+                    stale.updatedAt = Instant.now()
+                    invitations.save(stale)
+                }
+        }
 
         auditService.append(
             roomId, ActorType.USER, actor.userId, "JOIN_REQUEST_APPROVED", "JoinRequest", requestId,
