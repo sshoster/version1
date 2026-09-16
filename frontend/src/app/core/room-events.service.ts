@@ -3,6 +3,7 @@ import { Client, IMessage } from '@stomp/stompjs';
 import { Observable, Subject, filter } from 'rxjs';
 import { AuthService } from './auth.service';
 import { RoomEvent } from './models';
+import { wsUrl } from './server-base';
 
 /** Ping sent whenever a new in-app notification is stored for this user. */
 export interface NotificationPing {
@@ -48,9 +49,8 @@ export class RoomEventsService {
     const token = this.auth.accessToken();
     if (!token) return;
 
-    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
     const client = new Client({
-      brokerURL: `${protocol}://${location.host}/ws`,
+      brokerURL: wsUrl(),
       connectHeaders: { Authorization: `Bearer ${this.auth.accessToken() ?? ''}` },
       reconnectDelay: 4000,
       beforeConnect: () => {

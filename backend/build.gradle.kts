@@ -47,6 +47,7 @@ dependencies {
 
     // Time-ordered UUIDs (UUIDv7)
     implementation("com.github.f4b6a3:uuid-creator:6.1.1")
+    implementation("com.google.firebase:firebase-admin:9.7.0")
 
     // Versioned MongoDB migrations
     implementation("io.mongock:mongock-springboot-v3:5.5.1")

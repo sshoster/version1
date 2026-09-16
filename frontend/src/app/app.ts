@@ -1,9 +1,12 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, NgZone, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { App as CapacitorApp } from '@capacitor/app';
 import { AuthService } from './core/auth.service';
+import { isNativeApp } from './core/server-base';
 import { AvatarService } from './core/files.service';
 import { I18nService } from './core/i18n.service';
 import { RoomTool, RoomUiService } from './core/room-ui.service';
+import { PushService } from './core/push.service';
 import { RoomEventsService } from './core/room-events.service';
 import { RoomsStore } from './core/rooms-store.service';
 import { AvatarComponent } from './shared/avatar.component';
@@ -20,17 +23,35 @@ export class App {
   protected readonly roomUi = inject(RoomUiService);
   protected readonly roomsStore = inject(RoomsStore);
   private readonly roomEvents = inject(RoomEventsService);
+  private readonly push = inject(PushService);
   private readonly avatars = inject(AvatarService);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
 
   constructor() {
     // Pick up server-side profile changes (e.g. the super-admin flag) on every app start.
     if (this.auth.isAuthenticated()) this.auth.loadMe();
     // Keep the live channel connected from ANY signed-in page — it powers presence
     // (you appear online to your meetings while the app is open) and notification badges.
+    // On the native app, being signed in also registers this device for push.
     effect(() => {
-      if (this.auth.isAuthenticated()) this.roomEvents.watchNotifications();
+      if (this.auth.isAuthenticated()) {
+        this.roomEvents.watchNotifications();
+        void this.push.enable();
+      }
     });
+    // Native app: https links to our host (invite links, join codes) open the app —
+    // route them like in-app navigation instead of staying on whatever page was open.
+    if (isNativeApp()) {
+      void CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+        try {
+          const parsed = new URL(url);
+          this.zone.run(() => void this.router.navigateByUrl(parsed.pathname + parsed.search));
+        } catch {
+          // Not a URL we can route — ignore.
+        }
+      });
+    }
   }
 
   protected readonly drawerOpen = signal(false);
