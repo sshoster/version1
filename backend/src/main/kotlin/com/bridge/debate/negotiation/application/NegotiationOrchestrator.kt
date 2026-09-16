@@ -440,6 +440,13 @@ class NegotiationOrchestrator(
         run.result = buildResult(run, reason)
         run.updatedAt = Instant.now()
         runs.save(run)
+        // Even a stopped cycle hands its progress to the parties (and to the next cycle),
+        // as long as it produced anything of substance.
+        run.result?.let { result ->
+            if (run.turnCount > 0 && (result.agreedPoints.isNotEmpty() || result.unresolvedPoints.isNotEmpty())) {
+                cycleSummaryNote(result)?.let { sharing.publishSystemNote(roomId, it) }
+            }
+        }
         transactionTemplate.execute {
             auditService.append(
                 roomId, ActorType.SYSTEM, null, "NEGOTIATION_STOPPED", "NegotiationRun", runId,
@@ -509,7 +516,8 @@ class NegotiationOrchestrator(
     private fun previousCycle(roomId: String, currentRunId: String): RoundResult? =
         runs.findByRoomIdOrderByCreatedAtDesc(roomId)
             .firstOrNull {
-                it.id != currentRunId && it.status == RunStatus.COMPLETED &&
+                // A FAILED cycle's progress counts too — a provider hiccup must not reset the talks.
+                it.id != currentRunId && it.status in setOf(RunStatus.COMPLETED, RunStatus.FAILED) &&
                     it.result.let { r -> r != null && (r.agreedPoints.isNotEmpty() || r.unresolvedPoints.isNotEmpty()) }
             }
             ?.result
